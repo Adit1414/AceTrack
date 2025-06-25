@@ -1,0 +1,56 @@
+/* Netflix-inspired Base Styles */
+:root {
+  --netflix-red: #e50914;
+  --netflix-dark: #141414;
+  --netflix-gray: #333;
+  --netflix-light-gray: #757575;
+  --netflix-white: #fff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Netflix Sans', 'Helvetica Neue', 'Segoe UI', Roboto, Ubuntu, sans-serif;
+}
+
+body {
+  background-color: var(--netflix-dark);
+  color: var(--netflix-white);
+  line-height: 1.4;
+}
+
+a {
+  color: var(--netflix-white);
+  text-decoration: none;
+}
+
+/* Netflix-like buttons */
+.btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: var(--netflix-red);
+  color: var(--netflix-white);
+}
+
+.btn-primary:hover {
+  background-color: #c11119;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: rgba(109, 109, 110, 0.7);
+  color: var(--netflix-white);
+}
+
+.btn-secondary:hover {
+  background-color: rgba(109, 109, 110, 0.4);
+}
