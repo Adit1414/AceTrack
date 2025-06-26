@@ -10,9 +10,9 @@ import winsound
 from datetime import datetime
 
 # === CONFIGURATION ===
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 MODEL = 'gpt-4-turbo'
-EXCEL_PATH = "Files/Syllabus.xlsx"
+EXCEL_PATH = "Syllabus.xlsx"
 CHUNK_SIZE = 5
 TESTING = True
 EXAM = "UGC NET"
@@ -108,6 +108,7 @@ def call_gpt(prompt, testing, chunks, retries=3):
                  for i in range(chunks)]
             )
     else:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         for attempt in range(retries):
             try:
                 response = client.chat.completions.create(
