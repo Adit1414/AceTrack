@@ -12,13 +12,13 @@ from datetime import datetime
 # === CONFIGURATION ===
 
 MODEL = 'gpt-4-turbo'
-EXCEL_PATH = "Syllabus.xlsx"
+EXCEL_PATH = "src/Automation/Syllabus.xlsx"
 CHUNK_SIZE = 5
 TESTING = True
 EXAM = "UGC NET"
-QUESTIONS_PATH = "Files/Questions.docx"
-VERIFICATIONS_PATH = "Files/Verifications.docx"
-SKIPPED_PATH = "Files/Skipped.docx"
+QUESTIONS_PATH = "src/Automation/Files/Questions.docx"
+VERIFICATIONS_PATH = "src/Automation/Files/Verifications.docx"
+SKIPPED_PATH = "src/Automation/Files/Skipped.docx"
 skipped_chunks = []
 
 
@@ -62,7 +62,7 @@ def validate_topic_capacity(plan, total_topics):
     if total_chunks_requested > len(total_topics) // CHUNK_SIZE:
         print(f"❌ Not enough unique topics to generate all question chunks without duplication.")
         print(f"💡 Topics available: {len(total_topics)}, Questions requested: {total_chunks_requested * CHUNK_SIZE}")
-        winsound.PlaySound("WrongBuzzer.wav", winsound.SND_FILENAME)
+        winsound.PlaySound("src/Automation/WrongBuzzer.wav", winsound.SND_FILENAME)
         exit(1)
 
 def format_topics(topics_list):
@@ -150,7 +150,7 @@ Here are the questions:
 {questions_text}
 """
    
-def save_response(text, folder="RawResponses"):
+def save_response(text, folder="src/Automation/RawResponses"):
     # Make sure folder exists
     os.makedirs(folder, exist_ok=True)
     
@@ -167,7 +167,7 @@ def save_response(text, folder="RawResponses"):
     doc.save(path)
     print(f"✅ Response saved to: {path}")
              
-def save_to_docx(content, filename="Files/Questions.docx"):
+def save_to_docx(content, filename):
     try:
         with open(filename, 'a'):
             pass  # Attempt to open for append to check if it's locked
@@ -182,7 +182,7 @@ def save_to_docx(content, filename="Files/Questions.docx"):
         raise IOError(f"❌ Failed to save {filename}. Details: {e}")
 
 # === MAIN EXECUTION ===
-def GenerationMain(chunks):
+def GenerationMain(chunks, testing):
     user_plan = get_user_question_plan()
     all_topics = load_all_topics()
     validate_topic_capacity(user_plan, all_topics)
@@ -194,18 +194,18 @@ def GenerationMain(chunks):
         check_file_access(VERIFICATIONS_PATH)
     except Exception as e:
         print(e)
-        winsound.PlaySound("WrongBuzzer.wav", winsound.SND_FILENAME)
+        winsound.PlaySound("src/Automation/WrongBuzzer.wav", winsound.SND_FILENAME)
         exit(1)
     all_questions = []
 
     for qtype, prompt in generated_prompts:
         print(f"{qtype} : {prompt} \n\n")
         try:
-            generated_chunk = call_gpt(prompt, TESTING, chunks)
+            generated_chunk = call_gpt(prompt, testing, chunks)
             print(generated_chunk)
         except Exception as e:
             print(e)
-            winsound.PlaySound("WrongBuzzer.wav", winsound.SND_FILENAME)
+            winsound.PlaySound("src/Automation/WrongBuzzer.wav", winsound.SND_FILENAME)
             exit(1)
         finally:
             save_response(generated_chunk)
@@ -215,7 +215,7 @@ def GenerationMain(chunks):
             if q.strip()
         ]
         
-        if not TESTING and len(questions_split) != chunks:
+        if not testing and len(questions_split) != chunks:
             print(f"⚠️ GPT returned {len(questions_split)} questions instead of {chunks}. Skipping this chunk.")
             skipped_chunks.append(questions_split)
             continue
@@ -232,7 +232,7 @@ def GenerationMain(chunks):
         save_to_docx(questions_output, QUESTIONS_PATH)
     except Exception as e:
         print(e)
-        winsound.PlaySound("WrongBuzzer.wav", winsound.SND_FILENAME)
+        winsound.PlaySound("src/Automation/WrongBuzzer.wav", winsound.SND_FILENAME)
         exit(1)
 
     verified_output = ""
@@ -247,17 +247,17 @@ def GenerationMain(chunks):
 
         # Verify the chunk via GPTtry:
         try:
-            verification = call_gpt(verify_prompt(combined_text), TESTING, chunks)
+            verification = call_gpt(verify_prompt(combined_text), testing, chunks)
         except Exception as e:
             print(e)
-            winsound.PlaySound("WrongBuzzer.wav", winsound.SND_FILENAME)
+            winsound.PlaySound("src/Automation/WrongBuzzer.wav", winsound.SND_FILENAME)
             exit(1)
         verified_output += verification + "\n\n"
     try:
         save_to_docx(verified_output.strip(), VERIFICATIONS_PATH)
     except Exception as e:
         print(e)
-        winsound.PlaySound("WrongBuzzer.wav", winsound.SND_FILENAME)
+        winsound.PlaySound("src/Automation/WrongBuzzer.wav", winsound.SND_FILENAME)
         exit(1)
         
     if skipped_chunks:
@@ -273,7 +273,7 @@ def GenerationMain(chunks):
         save_to_docx(skipped_text.strip(), SKIPPED_PATH)
 
     print("\n✅ Shuffled and verified mock paper saved.")
-    winsound.PlaySound("CorrectHarp.wav", winsound.SND_FILENAME)
+    winsound.PlaySound("src/Automation/CorrectHarp.wav", winsound.SND_FILENAME)
 
 if __name__ == "__main__":
-    GenerationMain(CHUNK_SIZE)
+    GenerationMain(CHUNK_SIZE, TESTING)

@@ -12,10 +12,10 @@ from PromptsDict import prompt_templates
 TESTING = True
 CHUNK_SIZE = 3
 EXAM = "UGC NET"
-CHAPTER_XLSX = "ChapterSyllabus.xlsx"
-QUESTIONS_PATH = "Files/ChapterQuestions.docx"
-VERIFICATIONS_PATH = "Files/ChapterVerifications.docx"
-SKIPPED_PATH = "Files/ChaptertSkipped.docx"
+CHAPTER_XLSX = "src/Automation/ChapterSyllabus.xlsx"
+QUESTIONS_PATH = "src/Automation/Files/ChapterQuestions.docx"
+VERIFICATIONS_PATH = "src/Automation/Files/ChapterVerifications.docx"
+SKIPPED_PATH = "src/Automation/Files/ChaptertSkipped.docx"
 skipped_chunks = []
 
 MODE_OPTIONS = {
@@ -116,7 +116,7 @@ def ChapterTestMain():
         check_file_access(VERIFICATIONS_PATH)
     except Exception as e:
         print(e)
-        winsound.PlaySound("WrongBuzzer.wav", winsound.SND_FILENAME)
+        winsound.PlaySound("src/Automation/WrongBuzzer.wav", winsound.SND_FILENAME)
         return
 
     all_questions = []
@@ -145,7 +145,7 @@ def ChapterTestMain():
                 save_response(response)
             except Exception as e:
                 print(e)
-                winsound.PlaySound("WrongBuzzer.wav", winsound.SND_FILENAME)
+                winsound.PlaySound("src/Automation/WrongBuzzer.wav", winsound.SND_FILENAME)
                 continue
 
             questions = [q.strip() for q in textwrap.dedent(response).strip().split("--Question Starting--") if q.strip()]
@@ -172,7 +172,7 @@ def ChapterTestMain():
             verified_output += call_gpt(verify_prompt(joined_chunk),TESTING, 3) + "\n\n"
         except Exception as e:
             print(e)
-            winsound.PlaySound("WrongBuzzer.wav", winsound.SND_FILENAME)
+            winsound.PlaySound("src/Automation/WrongBuzzer.wav", winsound.SND_FILENAME)
             continue
 
     save_to_docx(verified_output.strip(), VERIFICATIONS_PATH)
@@ -186,14 +186,14 @@ def ChapterTestMain():
         save_to_docx(skipped_text, SKIPPED_PATH)
 
     print("\n✅ Chapter-wise Test completed.")
-    winsound.PlaySound("CorrectHarp.wav", winsound.SND_FILENAME)
+    winsound.PlaySound("src/Automation/CorrectHarp.wav", winsound.SND_FILENAME)
 
 if __name__ == "__main__":
     mode = choose_mode()
 
     if mode == "1":
         print("\n🧪 Starting Full Mock Test Mode...")
-        GenerationMain(3)
+        GenerationMain(5, TESTING)
 
     elif mode == "2":
         ChapterTestMain()
