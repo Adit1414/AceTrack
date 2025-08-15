@@ -1,24 +1,33 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,jsx,ts,tsx}",
-  ],
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
-      fontFamily: {
-        netflix: ["'Netflix Sans'", "Helvetica Neue", "Segoe UI", "Roboto", "Ubuntu", "sans-serif"],
-        slab: ["'Roboto Slab'", "serif"],
-      },
       colors: {
-        netflixRed: "#e50914",
-        darkBg: "#141414",
-        darkCard: "#1f1f1f",
-        textLight: "#e5e5e5",
-        textMuted: "#b3b3b3",
-      },
-      boxShadow: {
-        netflix: "0 4px 10px rgba(0, 0, 0, 0.5)",
+        cyan: {
+          50: '#ECFEFF',
+          100: '#CFFAFE',
+          200: '#A5F3FC',
+          300: '#67E8F9',
+          400: '#22D3EE',
+          500: '#06B6D4',
+          600: '#0891B2',
+          700: '#0E7490',
+          800: '#155E75',
+          900: '#164E63',
+        },
+        magenta: {
+          50: '#FDF2F8',
+          100: '#FCE7F3',
+          200: '#FBCFE8',
+          300: '#F9A8D4',
+          400: '#F472B6',
+          500: '#EC4899',
+          600: '#DB2777',
+          700: '#BE185D',
+          800: '#9D174D',
+          900: '#831843',
+        },
       },
     },
   },
