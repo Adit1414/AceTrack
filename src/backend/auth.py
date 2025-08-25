@@ -3,6 +3,9 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from dotenv import load_dotenv
+from fastapi import HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
 
 load_dotenv()
 
@@ -12,6 +15,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
@@ -39,3 +43,16 @@ def verify_token(token: str) -> dict:
         return {"email": email, "user_id": user_id}
     except JWTError:
         raise JWTError("Could not validate token")
+
+def get_current_user_from_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current user from JWT token"""
+    try:
+        token = credentials.credentials
+        payload = verify_token(token)
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )

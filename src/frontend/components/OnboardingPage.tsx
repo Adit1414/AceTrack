@@ -16,6 +16,7 @@ interface OnboardingPageProps {
 
 const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<OnboardingData>({
     examName: '',
     examDate: '',
@@ -23,6 +24,8 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
     studyHours: '',
     studyDays: '',
   });
+
+  const API_BASE_URL = 'http://localhost:8000';
 
   const exams = [
     'JEE (Joint Entrance Examination)',
@@ -45,9 +48,49 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
     { category: 'General Studies', items: ['History', 'Geography', 'Politics', 'Economics', 'Current Affairs'] },
   ];
 
+  const submitOnboardingData = async (data: OnboardingData) => {
+    const token = localStorage.getItem('access_token'); // Fixed: use 'access_token' consistently
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    // Transform your form data to match the backend schema
+    const backendData = {
+      exam_name: data.examName,
+      exam_date: data.examDate,
+      current_preparation_level: 'intermediate', // Default value since you don't collect this
+      daily_study_hours: parseInt(data.studyHours) || 4,
+      preferred_study_time: 'morning', // Default value since you don't collect this
+      topics_covered: data.topicsCovered,
+      weak_subjects: [], // Empty array since you don't collect this
+      strong_subjects: [], // Empty array since you don't collect this
+      additional_notes: `Study Days per Week: ${data.studyDays}` // Store study days in notes
+    };
+
+    console.log('Sending onboarding data:', backendData); // Debug log
+
+    const response = await fetch(`${API_BASE_URL}/onboarding`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // Fixed: proper Bearer token format
+      },
+      body: JSON.stringify(backendData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Backend error:', errorData); // Debug log
+      throw new Error(errorData.detail || 'Failed to save onboarding data');
+    }
+
+    return await response.json();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
       // Validate form data
@@ -55,14 +98,15 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
         throw new Error('Please fill in all required fields');
       }
 
-      // Add a small delay to show loading state
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Submit to backend
+      const result = await submitOnboardingData(formData);
+      console.log('Onboarding data saved successfully:', result);
 
       // Call the completion handler with form data
       onComplete(formData);
     } catch (error) {
       console.error('Error submitting onboarding:', error);
-      // Handle error (you might want to show an error message)
+      setError(error instanceof Error ? error.message : 'An error occurred while saving your data');
     } finally {
       setLoading(false);
     }
@@ -73,6 +117,8 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Clear error when user starts changing form data
+    if (error) setError(null);
   };
 
   const handleTopicToggle = (topic: string) => {
@@ -82,6 +128,8 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
         ? prev.topicsCovered.filter(t => t !== topic)
         : [...prev.topicsCovered, topic]
     }));
+    // Clear error when user starts changing form data
+    if (error) setError(null);
   };
 
   const getMinDate = () => {
@@ -123,6 +171,13 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
             </div>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        )}
 
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
@@ -284,7 +339,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Generating Your Plan...
+                    Saving Your Data...
                   </span>
                 ) : (
                   'Generate My Study Plan ✨'

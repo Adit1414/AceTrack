@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, BookOpen, Target, TrendingUp } from 'lucide-react';
 
 interface LoginPageProps {
-  onLogin: (userData: { id: number; email: string; token: string }) => void;
+  onLogin: (userData: { id: number; email: string; token: string; hasCompletedOnboarding: boolean }) => void;
   onSwitchToSignup?: () => void;
 }
 
@@ -40,14 +40,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSwitchToSignup }) => {
         throw new Error(data.detail || 'Login failed');
       }
 
-      // Store token in localStorage
+      // Store token in localStorage with consistent key
       localStorage.setItem('access_token', data.access_token);
       
-      // Call onLogin with user data
+      // Call onLogin with user data including onboarding status
       onLogin({
         id: data.user.id,
         email: data.user.email,
         token: data.access_token,
+        hasCompletedOnboarding: data.user.has_completed_onboarding
       });
 
     } catch (err) {

@@ -3,7 +3,8 @@
 .PHONY: all backend frontend dev
 
 backend:
-	cd src/backend && uvicorn main:app --reload
+	cd src && uvicorn backend.main:app --reload
+
 
 frontend:
 	npm run dev
