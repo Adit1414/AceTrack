@@ -9,10 +9,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 DATABASE_PASS = urllib.parse.quote_plus(os.getenv("DATABASE_PASS"))
+# DATABASE_URL = urllib.parse.quote_plus(os.getenv("DATABASE_URL"))
 DATABASE_USER = "postgres"
 DATABASE_NAME = "StudyPlanner"
 
-DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASS}@localhost/{DATABASE_NAME}"
+# DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASS}@localhost/{DATABASE_NAME}"
+# DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASS}@db.sfcszdosbwjrlubgotvj.supabase.co:5432/postgres"
+DATABASE_URL = f"postgresql://postgres:AceTrack%402025@db.sfcszdosbwjrlubgotvj.supabase.co:5432/postgres"
 
 if not DATABASE_PASS:
     raise ValueError("DATABASE_PASS not set in .env file")
