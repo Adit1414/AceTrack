@@ -3,11 +3,11 @@
 .PHONY: all backend frontend dev
 
 backend:
-	cd backend && uvicorn backend.app.main:app --reload
+	cd backend && code .
 
 
 frontend:
-	cd frontend && npm run dev
+	cd frontend && code .
 
 dev:
 	cmd /c start cmd /k "make backend"

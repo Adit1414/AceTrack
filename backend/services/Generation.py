@@ -11,7 +11,7 @@ import json
 import uuid
 
 # ===============================================================
-# === ROBUST PATH CONFIGURATION (CORRECTED) ===
+# === ROBUST PATH CONFIGURATION ===
 # ===============================================================
 
 # Get the absolute path of the directory containing this script (Generation.py)
