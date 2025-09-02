@@ -8,7 +8,7 @@ no direct applications. i want them to be really analytical, ones that take seve
 so please give appropriately tough questions
 answer key: {answer_key}
 arrange the options such that the answer key is true. make sure that the answer key ive provided is absolutely correct, shows in the questions you give, and matches correctly with the options, solution and the hence line. create {num} - Match The Following type questions like this - very {exam} type, and very analytical. a lot longer and better explanation and dont type anything like topic name or intro etc. just what i asked. remember to add the hence line at the end of each solution. Check for any discrepancies or issues with the question, answer key and solutions. 
-make sure to follow the format to the letter. make sure you generate {num} questions, one for each topic, make sure that all the options provided are distinct from each other intraquestion, and also make sure that the correct option is distinct interquestion. there should be variations in the correct options. make sure that the option that the answer key points to matches with the solution. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY EXACT format -
+make sure to follow the format to the letter. make sure you generate {num} questions, one for each topic, make sure that all the options provided are distinct from each other intraquestion, and also make sure that the correct option is distinct interquestion. there should be variations in the correct options. make sure that the option that the answer key points to matches with the solution. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY EXACT format -
 
 --Question Starting--
 Match the following network types with their most appropriate characteristics:
@@ -59,7 +59,7 @@ no direct applications. i want them to be really analytical, ones that take seve
 so please give appropriately tough questions
 answer key: {answer_key}
 arrange the options such that the answer key is true. make sure you generate exactly {num} questions, one for each topic, make sure that the answer key ive provided is absolutely correct, shows in the questions you give, and matches correctly with the options, solution and the hence line. 
-create {num} - 2 statement type questions like this - very {exam} type, and very analytical. a lot longer and better explanation and dont type anything like topic name or intro etc. just what i asked. remember to add the hence line at the end of each solution. Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format -
+create {num} - 2 statement type questions like this - very {exam} type, and very analytical. a lot longer and better explanation and dont type anything like topic name or intro etc. just what i asked. remember to add the hence line at the end of each solution. Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format -
 
 --Question Starting--
 1. Consider the following two statements related to parsing techniques:
@@ -100,7 +100,7 @@ no direct applications. i want them to be really analytical, ones that take seve
 so please give appropriately tough questions
 answer key: {answer_key}
 arrange the options such that the answer key is true. make sure you generate exactly {num} questions, one for each topic, make sure that the answer key ive provided is absolutely correct, shows in the questions you give, and matches correctly with the options, solution and the hence line.  
-create {num} - 3 statement type questions, one from each topic - very {exam} computer science type, and very analytical.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. remember to add the hence line at the end of each solution. arrange the options such that the answer key is true. very very long and better explanation and dont type anything like topic or intro etc. just what i asked. - make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format - 
+create {num} - 3 statement type questions, one from each topic - very {exam} computer science type, and very analytical.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. remember to add the hence line at the end of each solution. arrange the options such that the answer key is true. very very long and better explanation and dont type anything like topic or intro etc. just what i asked. - make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format - 
 
 --Question Starting--
 1. Which of the following statements about firewalls and intrusion detection systems are correct?
@@ -152,7 +152,7 @@ no direct applications. i want them to be really analytical, ones that take seve
 so please give appropriately tough questions
 answer key: {answer_key}
 arrange the options such that the answer key is true. make sure you generate exactly {num} questions, one for each topic, make sure that the answer key ive provided is absolutely correct, shows in the questions you give, and matches correctly with the options, solution and the hence line.  
-create {num} - 4 statement type questions, one from each topic - very {exam} computer science type, and very analytical.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. remember to add the hence line at the end of each solution. arrange the options such that the answer key is true. very very long and better explanation and dont type anything like topic or intro etc. just what i asked. - make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format - 
+create {num} - 4 statement type questions, one from each topic - very {exam} computer science type, and very analytical.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. remember to add the hence line at the end of each solution. arrange the options such that the answer key is true. very very long and better explanation and dont type anything like topic or intro etc. just what i asked. - make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format - 
 
 --Question Starting--
 1. Which of the following statements about FCFS (First Come First Serve) scheduling are correct?
@@ -202,7 +202,7 @@ i want them to be really analytical, ones that take several seconds of thought a
 so please give appropriately tough questions
 answer key: {answer_key}
 arrange the options such that the answer key is true. make sure you generate exactly {num} questions, one for each topic, make sure that the answer key ive provided is absolutely correct, shows in the questions you give, and matches correctly with the options, solution and the hence line.  
-create {num} - 5 statement type questions, one from each topic - very {exam} computer science type, and very analytical.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. remember to add the hence line at the end of each solution. arrange the options such that the answer key is true. very very long and better explanation and dont type anything like topic or intro etc. just what i asked. - make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format - 
+create {num} - 5 statement type questions, one from each topic - very {exam} computer science type, and very analytical.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. remember to add the hence line at the end of each solution. arrange the options such that the answer key is true. very very long and better explanation and dont type anything like topic or intro etc. just what i asked. - make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format - 
 
 --Question Starting--
 1. Consider the following statements regarding pipeline and vector processing:
@@ -232,7 +232,7 @@ Hence, Option (2) is the right answer.
 
 --Question Starting--
 2. Consider the following statements about various AI algorithms and techniques:
-I.	In A\* algorithm, the evaluation function f(n) = g(n) + h(n) ensures optimality only if h(n) is admissible and consistent.
+I.	In A* algorithm, the evaluation function f(n) = g(n) + h(n) ensures optimality only if h(n) is admissible and consistent.
 II.	Hill Climbing algorithm is complete and guarantees a global optimum if the heuristic function is monotonic.
 III.	Minimax algorithm assumes that the opponent plays optimally and is mainly used in two-player deterministic games.
 IV.	Alpha-Beta pruning does not affect the final outcome of minimax but reduces the number of nodes evaluated.
@@ -244,7 +244,7 @@ Choose the correct answer from the options given below:
 (4)	I, III, IV and V only
 Answer Key: 3
 Solution:
-•	Statement I(Correct): In A\* search, the heuristic h(n) must be admissible (never overestimates cost) and consistent (also known as monotonic) to ensure optimality. This is a foundational requirement for A\* to always find the shortest path.
+•	Statement I(Correct): In A* search, the heuristic h(n) must be admissible (never overestimates cost) and consistent (also known as monotonic) to ensure optimality. This is a foundational requirement for A* to always find the shortest path.
 •	Statement III(Correct): Minimax is used in two-player zero-sum games and assumes that both players play optimally. The opponent's optimal moves are simulated to determine the best move for the player.
 •	Statement IV(Correct): Alpha-Beta pruning improves efficiency of minimax by pruning branches that won't affect the final decision. It doesn't change the result, only reduces search time.
 •	Statement II(Incorrect): Hill Climbing is not complete and often gets stuck in local maxima, even with a monotonic heuristic. It lacks backtracking and may fail even when a solution exists.
@@ -259,7 +259,7 @@ no direct applications. i want them to be really analytical, ones that take seve
 so please give appropriately tough questions
 answer key: {answer_key}
 arrange the options such that the answer key is true. make sure you generate exactly {num} questions, one for each topic, make sure that the answer key ive provided is absolutely correct, shows in the questions you give, and matches correctly with the options, solution and the hence line. 
-Create {num} - single liner type questions like this, one question should be from each topic provided - very {exam} type, and very analytical. a lot longer and better explanation and dont type anything like topic name or intro etc. just what i asked. remember to add the hence line at the end of each solution. Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format -
+Create {num} - single liner type questions like this, one question should be from each topic provided - very {exam} type, and very analytical. a lot longer and better explanation and dont type anything like topic name or intro etc. just what i asked. remember to add the hence line at the end of each solution. Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY exact format -
 
 --Question Starting--
 1. A team of developers built an e-commerce web application using the MERN stack. During staging, they conducted performance testing using JMeter and identified issues with concurrent request handling. The security team later flagged improper session termination and vulnerable endpoints. Before production deployment, they integrated the CI/CD pipeline with automated testing tools and containerized the app using Docker. 
@@ -300,7 +300,7 @@ no direct applications. i want them to be really analytical, ones that take seve
 so please give appropriately tough questions
 answer key: {answer_key}
 arrange the options such that the answer key is true. make sure you generate exactly {num} questions, one for each topic, make sure that the answer key ive provided is absolutely correct, shows in the questions you give, and matches correctly with the options, solution and the hence line.  
-Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. arrange the options such that the answer key is true. remember to add the hence line at the end of each solution. 
+Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. arrange the options such that the answer key is true. remember to add the hence line at the end of each solution. 
 create {num} assertion reasoning type questions like this - very {exam} type, and very analytical. a lot longer and better explanation and dont type anything like topic name or intro etc. just what i asked. make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY EXACT format - format -
 
 --Question Starting--
@@ -345,7 +345,7 @@ arrange the questions such that the answer key is - {answer_key}
 difficulty - MODERATE, EXTREMELY ANALYTICAL- each question should be distinct and dont follow the same kind of pattern for each question.
 no direct applications. i want them to be really analytical, ones that take several seconds of thought atleast
 so please give appropriately tough questions
-{num} more case study type questions like this - a lot harder, very very analytical. very {exam} type. remember to add the hence line at the end - important. longer and better explanation and dont type anything like topic or intro etc. just what i asked. Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. 
+{num} more case study type questions like this - a lot harder, very very analytical. very {exam} type. remember to add the hence line at the end - important. longer and better explanation and dont type anything like topic or intro etc. just what i asked. Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. 
 
 make sure you create exactly {num} questions, one from each topic and make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens and use this exact format - format -
 
@@ -372,7 +372,7 @@ answer keys - {answer_key}
 difficulty - MODERATE, EXTREMELY ANALYTICAL- each question should be distinct and dont follow the same kind of pattern for each question.
 no direct applications. i want them to be really analytical, ones that take several seconds of thought atleast
 so please give appropriately tough questions
-arrange the options such that the answer key is true. create {num} chronology type questions like this - very {exam} type, and very analytical. a lot longer and better explanation and dont type anything like topic name or intro etc.  just what i asked. remember to add the hence line at the end - important.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. 
+arrange the options such that the answer key is true. create {num} chronology type questions like this - very {exam} type, and very analytical. a lot longer and better explanation and dont type anything like topic name or intro etc.  just what i asked. remember to add the hence line at the end - important.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. 
 make sure you create exactly {num} questions, one from each topic and make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens and use this VERY exact format -
 
 --Question Starting--
@@ -396,7 +396,7 @@ Statement IV - The osmotic movement of fluids known as bulk flow play an additio
 Statement III - Sodium regulation through the kidney occurs when these organs take up filtered salt following the absorption process.
 Statement V - Aldosterone regulates how much sodium the body either keeps or releases depending on its needs thus supporting both fluid stability and proper functions of neurons and muscles.
 Hence, the correct answer is Option (2).""",
-"FU":"""fill blanks 
+"FIL":"""fill blanks 
 topic - 
 {topics}
 
@@ -404,7 +404,7 @@ answer key - {answer_key}
 difficulty - MODERATE, EXTREMELY ANALYTICAL- each question should be distinct and dont follow the same kind of pattern for each question.
 no direct applications. i want them to be really analytical, ones that take several seconds of thought atleast
 so please give appropriately tough questionstype - {exam}
-create {num} fill in the blanks type questions like this - very very analytical. and unique. a lot longer and better explanation and dont type anything like topic name or intro etc. just what i asked. remember to add the hence line at the end - important.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. 
+create {num} fill in the blanks type questions like this - very very analytical. and unique. a lot longer and better explanation and dont type anything like topic name or intro etc. just what i asked. remember to add the hence line at the end - important.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. 
 make sure you create exactly {num} questions, one from each topic and make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens and use this VERY exact format  - format - 
  
 --Question Starting--
@@ -428,7 +428,7 @@ arrange the questions such that the answer key is - {answer_key}
 difficulty - MODERATE, EXTREMELY ANALYTICAL- each question should be distinct and dont follow the same kind of pattern for each question.
 no direct applications. i want them to be really analytical, ones that take several seconds of thought atleast
 so please give appropriately tough questions
-{num} more case study type questions like this - a lot harder, very very analytical. very {exam} type. remember to add the hence line at the end - important. longer and better explanation and dont type anything like topic or intro etc. just what i asked. Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. 
+{num} more case study type questions like this - a lot harder, very very analytical. very {exam} type. remember to add the hence line at the end - important. longer and better explanation and dont type anything like topic or intro etc. just what i asked. Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. 
 
 make sure you create exactly {num} questions, one from each topic and make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens and use this exact format - format -
 
@@ -455,7 +455,7 @@ topic - {topics}
 difficulty - MODERATE, EXTREMELY ANALYTICAL- each question should be distinct and dont follow the same kind of pattern for each question.
 no direct applications. i want them to be really analytical, ones that take several seconds of thought atleast
 so please give appropriately tough questions
-create {num} msq type questions with multiple being selected- very {exam} type . arrange the options such that the answer key is true. longer and better explanation and dont type anything like topic or intro etc. just what i asked. remember that msq type questions' options are always short and of only 1 to 4 words max. remember to add the hence line at the end of each solution.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. 
+create {num} msq type questions with multiple being selected- very {exam} type . arrange the options such that the answer key is true. longer and better explanation and dont type anything like topic or intro etc. just what i asked. remember that msq type questions' options are always short and of only 1 to 4 words max. remember to add the hence line at the end of each solution.  Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. 
 make sure you create exactly {num} questions, one from each topic and make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens and use this VERY exact format -
 
 --Question Starting--
@@ -485,7 +485,7 @@ no direct applications. i want them to be really analytical, ones that take seve
 so please give appropriately tough questions
 answer key: {answer_key}
 arrange the options such that the answer key is true. make sure you generate exactly {num} numerical questions, one for each topic, make sure that the answer key ive provided is absolutely correct, shows in the questions you give, and matches correctly with the options, solution and the hence line.  
-Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. arrange the options such that the answer key is true. remember to add the hence line at the end of each solution. 
+Check for any discrepancies or issues with the question, answer key and solutions. Check if any options are wrongly marked or any options are similar to each other - check each 50 times before sending it. Make sure that you dont add any extra text before or after, There should only be Question Starting, Question, Answer Key, Solution and Hence line for the {num} questions and no other text. arrange the options such that the answer key is true. remember to add the hence line at the end of each solution. 
 create {num} numerical type questions like this - very {exam} type, and very analytical. a lot longer and better explanation and dont type anything like topic name or intro etc. just what i asked. make sure to start every question with "--Question Starting--", this is extremely important, make sure that happens, and use this VERY EXACT format - format -
 
 --Question Starting--
