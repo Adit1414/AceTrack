@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Option 1: Use environment variable (recommended for production)
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://avnadmin:AVNS_DRQSnzUgaVC4P-VdeS8@pg-220bcba-aditverma1407-337a.d.aivencloud.com:19074/defaultdb?sslmode=require")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://avnadmin:AVNS_ER1DqdDbGswkk5SLqhU@pg-220bcba-aditverma1407-337a.d.aivencloud.com:19074/defaultdb?sslmode=require")
 
 # Option 2: Keep hardcoded (current approach - works fine for development)
 # DATABASE_URL = "postgresql://avnadmin:AVNS_DRQSnzUgaVC4P-VdeS8@pg-220bcba-aditverma1407-337a.d.aivencloud.com:19074/defaultdb?sslmode=require"

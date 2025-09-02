@@ -120,18 +120,37 @@ async def download_questions_file(
     if ".." in filename or "/" in filename:
         raise HTTPException(status_code=400, detail="Invalid filename.")
     
-    # Corrected: Build path to 'generated_files' at the project root
-    # __file__ is in .../src/backend/, so we go up two levels to the root
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    file_path = os.path.join(project_root, "generated_files", filename)
+    # # Corrected: Build path to 'generated_files' at the project root
+    # # __file__ is in .../src/backend/, so we go up two levels to the root
+    # project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    # file_path = os.path.join(project_root, "generated_files", filename)
     
+    # if not os.path.exists(file_path):
+    #     raise HTTPException(status_code=404, detail=f"File not found at {file_path}. It may have expired or failed to generate.")
+    
+    # return FileResponse(
+    #     path=file_path,
+    #     filename=filename,
+    #     media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    # )
+    
+    # Get the directory where this main.py script is located (e.g., /path/to/project/backend)
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Construct the correct path to the generated files directory
+    # This matches the path used in Generation.py
+    file_dir = os.path.join(current_script_dir, "data", "generated_files")
+    file_path = os.path.join(file_dir, filename)
+
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail=f"File not found at {file_path}. It may have expired or failed to generate.")
+        # Return a more descriptive error to help with debugging
+        raise HTTPException(status_code=404, detail=f"File not found. Searched at: {file_path}")
     
     return FileResponse(
         path=file_path,
         filename=filename,
-        media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        # Corrected media type for PDF files
+        media_type='application/pdf'
     )
 
 # ... (rest of the USER AUTH & ONBOARDING ENDPOINTS remain the same) ...

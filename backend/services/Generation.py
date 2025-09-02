@@ -5,6 +5,7 @@ import textwrap
 import os
 import pandas as pd
 from docx import Document
+from fpdf import FPDF # NEW IMPORT
 from services.PromptsDict import prompt_templates
 from datetime import datetime
 import json
@@ -22,7 +23,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
 
 # Build absolute paths to ensure files are always found
-MODEL = 'gpt-4-turbo'
+# MODEL = 'gpt-4-turbo'
+MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
 EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "Syllabus.xlsx")
 # Define the path to the backend/data directory
 BACKEND_DATA_DIR = os.path.join(PROJECT_ROOT, "backend", "data")
@@ -58,10 +60,8 @@ def validate_topic_capacity(plan, total_topics):
     questions_per_chunk = 5
     total_chunks_requested = sum(num // questions_per_chunk for num in plan.values())
     if total_chunks_requested > len(total_topics) // questions_per_chunk:
-        error_msg = f"Not enough unique topics to generate the requested number of questions. Topics available: {len(total_topics)}, Questions requested: {sum(plan.values())}"
+        error_msg = f"Not enough unique topics to generate the requested number of questions. \nTopics available: {len(total_topics)}, Questions requested: {sum(plan.values())}"
         raise ValueError(error_msg)
-
-# ... (rest of the functions like build_prompt_from_template, generate_all_prompts) ...
 
 def build_prompt_from_template(topics_list, template_key, num_of_questions, EXAM):
     """Builds a GPT prompt from a template with the given topics."""
@@ -95,16 +95,42 @@ def save_to_docx(content, filename):
         doc.save(path)
     except Exception as e:
         raise IOError(f"❌ Cannot access {path}. Details: {e}")
+    
+def save_to_pdf(content, filename):
+    """Saves the given content to a .pdf file in the output directory."""
+    path = os.path.join(OUTPUT_DIR, filename)
+    try:
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=11)
+        # Encode text to latin-1 for FPDF compatibility with standard fonts
+        # For full Unicode, you'd need to add a font like DejaVu
+        encoded_content = content.encode('latin-1', 'replace').decode('latin-1')
+        pdf.multi_cell(0, 5, txt=encoded_content)
+        pdf.output(path)
+    except Exception as e:
+        raise IOError(f"❌ Cannot save PDF to {path}. Details: {e}")
 
 def save_raw_response(text, folder=RAW_RESPONSES_DIR):
     """Saves the raw GPT response for debugging purposes."""
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"gpt_response_{timestamp}.docx"
+    # filename = f"gpt_response_{timestamp}.docx"
+    filename = f"gpt_response_{timestamp}.pdf"
     path = os.path.join(folder, filename)
-    doc = Document()
-    doc.add_paragraph(text)
-    doc.save(path)
-    print(f"✅ Raw response saved to: {path}")
+    # doc = Document()
+    # doc.add_paragraph(text)
+    # doc.save(path)
+    # print(f"✅ Raw response saved to: {path}")
+    try:
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=11)
+        encoded_text = text.encode('latin-1', 'replace').decode('latin-1')
+        pdf.multi_cell(0, 5, txt=encoded_text)
+        pdf.output(path)
+        print(f"✅ Raw response saved to: {path}")
+    except Exception as e:
+        print(f"❌ Failed to save raw response PDF. Details: {e}")
 
 
 # === GPT HANDLING ===
@@ -176,8 +202,10 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str):
         print(f"Starting generation for {exam_name} with plan: {plan}")
         
         run_id = uuid.uuid4().hex[:8]
-        questions_filename = f"Questions_{run_id}.docx"
-        skipped_filename = f"Skipped_{run_id}.docx"
+        # questions_filename = f"Questions_{run_id}.docx"
+        # skipped_filename = f"Skipped_{run_id}.docx"
+        questions_filename = f"Questions_{run_id}.pdf"
+        skipped_filename = f"Skipped_{run_id}.pdf"
 
         topics = load_all_topics()
         validate_topic_capacity(plan, topics)
@@ -188,14 +216,16 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str):
         if not generated_questions:
              raise RuntimeError("No questions were successfully generated. Check logs for API errors or response format issues.")
         
-        save_to_docx("\n\n".join(generated_questions), questions_filename)
+        # save_to_docx("\n\n".join(generated_questions), questions_filename)
+        save_to_pdf("\n\n".join(generated_questions), questions_filename)
         
         if skipped_chunks:
             skipped_text = "\n\n".join([
                 f"Skipped Chunk {i+1}:\n" + "\n\n".join(str(q) for q in chunk)
                 for i, chunk in enumerate(skipped_chunks)
             ])
-            save_to_docx(skipped_text, skipped_filename)
+            # save_to_docx(skipped_text, skipped_filename)
+            save_to_pdf(skipped_text, skipped_filename)
 
         print("\n✅ Mock Test Generation Completed.")
         
