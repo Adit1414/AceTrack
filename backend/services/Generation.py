@@ -23,8 +23,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
 
 # Build absolute paths to ensure files are always found
-# MODEL = 'gpt-4-turbo'
-MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
+MODEL = 'gpt-4-turbo'
+# MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
 # questions_per_chunk = 5 
 questions_per_chunk = 3 # change to 5 when on production level
 EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "Syllabus.xlsx")
@@ -82,7 +82,8 @@ def generate_all_prompts(plan, topics, exam):
         for _ in range(count // questions_per_chunk):
             chunk = topics[topic_index:topic_index + questions_per_chunk]
             topic_index += questions_per_chunk
-            prompt = build_prompt_from_template(chunk, qtype, questions_per_chunk, exam)
+            prompt = build_prompt_from_template(chunk, qtype, questions_per_chunk
+                                                , exam)
             prompts.append((qtype, prompt))
     return prompts
 
@@ -137,6 +138,7 @@ def save_raw_response(text, folder=RAW_RESPONSES_DIR):
 # === GPT HANDLING ===
 def call_gpt(prompt, testing, chunks, retries=3):
     """Calls the OpenAI API with a given prompt, with retries."""
+    print
     if testing:
         time.sleep(1)
         return "\n\n".join([
@@ -219,7 +221,7 @@ def handle_generation(prompts, TESTING):
             # Optionally, you could save the last failed response for debugging
             skipped_chunks.append(f"Failed chunk for type: {qtype}")
             
-    random.shuffle(all_questions)
+    # random.shuffle(all_questions)
     return all_questions, skipped_chunks
 
 

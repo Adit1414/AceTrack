@@ -52,6 +52,8 @@ const formatFilenameForDisplay = (filename: string): string => {
   return 'Download File';
 };
 
+const numQuestionsChunk = 3;
+
 // --- MAIN COMPONENT ---
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   // --- STATE MANAGEMENT ---
@@ -154,7 +156,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       return;
     }
 
-    const invalidCounts = Object.entries(questionPlan).filter(([_, count]) => count > 0 && count % 5 !== 0);
+    const invalidCounts = Object.entries(questionPlan).filter(([_, count]) => count > 0 && count % numQuestionsChunk !== 0);
     if (invalidCounts.length > 0) {
       setGenerationResult({ success: false, message: 'All question counts must be multiples of 5.' });
       return;
@@ -428,7 +430,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                         <h4 className="font-medium text-gray-800">{qtype.name}</h4>
                         <p className="text-sm text-gray-600">{qtype.description}</p>
                       </div>
-                      <input type="number" min="0" step="5" placeholder="0" value={questionPlan[qtype.name] || ''} onChange={(e) => handleQuestionCountChange(qtype.name, e.target.value)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-center"/>
+                      <input type="number" min="0" step={numQuestionsChunk} placeholder="0" value={questionPlan[qtype.name] || ''} onChange={(e) => handleQuestionCountChange(qtype.name, e.target.value)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-center"/>
                     </div>
                   )) : (
                     <div className="text-center py-8"><Loader2 className="w-6 h-6 text-gray-400 animate-spin mx-auto" /><p className="mt-2 text-gray-500">Loading...</p></div>
