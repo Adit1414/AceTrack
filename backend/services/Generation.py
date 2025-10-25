@@ -10,6 +10,8 @@ from services.PromptsDict import prompt_templates
 from datetime import datetime
 import json
 import uuid
+from pymongo import MongoClient, errors # <-- NEW: Import MongoClient and errors
+from pymongo.errors import ConnectionFailure, OperationFailure
 
 # ===============================================================
 # === ROBUST PATH CONFIGURATION ===
@@ -23,8 +25,9 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
 
 # Build absolute paths to ensure files are always found
-MODEL = 'gpt-4-turbo'
-# MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
+# MODEL = 'gpt-4-turbo'
+MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
+SAVE_GENERATIONS_TO_DB = True
 # questions_per_chunk = 5 
 questions_per_chunk = 3 # change to 5 when on production level
 EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "Syllabus.xlsx")
@@ -39,6 +42,25 @@ RAW_RESPONSES_DIR = os.path.join(BACKEND_DATA_DIR, "raw_responses")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(RAW_RESPONSES_DIR, exist_ok=True)
 
+# ===============================================================
+# === MONGODB SETUP ===
+# ===============================================================
+try:
+    MONGO_CONNECTION_STRING = os.getenv("MONGO_URI")
+    if not MONGO_CONNECTION_STRING:
+        print("⚠️ MONGO_URI not set. Logging to MongoDB will be disabled.")
+        mongo_client = None
+    else:
+        mongo_client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000)
+        # Test the connection
+        mongo_client.admin.command('ping')
+        print("✅ MongoDB connection successful.")
+        db = mongo_client["acetrack_finetune_db"] # Your database name
+        finetune_collection = db["generation_logs"] # Your collection name
+except ConnectionFailure:
+    print("❌ MongoDB connection failed. Check connection string or network access.")
+    mongo_client = None
+# ===============================================================
 
 # === TOPIC LOADING AND PROMPT GENERATION ===
 def load_all_topics(excel_path=EXCEL_PATH):
@@ -77,13 +99,12 @@ def generate_all_prompts(plan, topics, exam):
     topic_index = 0
     # questions_per_chunk = 5
     for qtype, count in plan.items():
-        if topic_index + (count // questions_per_chunk * questions_per_chunk) > len(topics):
+        if topic_index + ((count // questions_per_chunk) * questions_per_chunk) > len(topics):
             raise ValueError("Topic index out of bounds. This indicates a logic error in topic validation.")
         for _ in range(count // questions_per_chunk):
-            chunk = topics[topic_index:topic_index + questions_per_chunk]
+            chunk = topics[topic_index : topic_index + questions_per_chunk]
             topic_index += questions_per_chunk
-            prompt = build_prompt_from_template(chunk, qtype, questions_per_chunk
-                                                , exam)
+            prompt = build_prompt_from_template(chunk, qtype, questions_per_chunk, exam)
             prompts.append((qtype, prompt))
     return prompts
 
@@ -136,9 +157,9 @@ def save_raw_response(text, folder=RAW_RESPONSES_DIR):
 
 
 # === GPT HANDLING ===
-def call_gpt(prompt, testing, chunks, retries=3):
+def call_gpt(prompt, testing, exam_name, chunks, retries=3):
     """Calls the OpenAI API with a given prompt, with retries."""
-    print
+    
     if testing:
         time.sleep(1)
         return "\n\n".join([
@@ -150,18 +171,39 @@ def call_gpt(prompt, testing, chunks, retries=3):
         raise ValueError("OPENAI_API_KEY environment variable not set.")
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    system_prompt = "You are a JEE Mains paper setter."
     for attempt in range(retries):
         try:
             response = client.chat.completions.create(
                 model=MODEL,
                 messages=[
-                    {"role": "system", "content": "You are a JEE Mains paper setter."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
                 max_tokens=4000
             )
-            return response.choices[0].message.content
+            response_content = response.choices[0].message.content
+        
+        # <-- NEW: Save to MongoDB on success -->
+            if not testing and mongo_client and response_content and SAVE_GENERATIONS_TO_DB:
+                try:
+                    finetune_collection.insert_one({
+                        "system": system_prompt,
+                        "prompt": prompt,
+                        "response": response_content,
+                        "exam": exam_name,
+                        "model": MODEL,
+                        "created_at": datetime.now()
+                    })
+                    print("  -> ✅ Logged generation pair to MongoDB.")
+                except OperationFailure as e:
+                    print(f"  -> ⚠️ Failed to log to MongoDB (OperationFailure): {e.details}")
+                except Exception as e:
+                    print(f"  -> ⚠️ Failed to log to MongoDB (General Error): {e}")
+
+            return response_content # <-- Return the successful response
+        
         except Exception as e:
             print(f"⚠️ GPT attempt {attempt+1} failed: {e}")
             if attempt < retries - 1:
@@ -170,7 +212,7 @@ def call_gpt(prompt, testing, chunks, retries=3):
 
 
 # === CORE EXECUTION LOGIC ===
-def handle_generation(prompts, TESTING):
+def handle_generation(prompts, TESTING, exam_name):
     """Handles the question generation loop, calling GPT for each prompt."""
     all_questions = []
     skipped_chunks = []
@@ -184,7 +226,7 @@ def handle_generation(prompts, TESTING):
         for attempt in range(max_retries_per_chunk):
             try:
                 print(f"  -> Attempt {attempt + 1} for {qtype}...")
-                response = call_gpt(prompt, TESTING, questions_per_chunk)
+                response = call_gpt(prompt, TESTING, exam_name, questions_per_chunk)
                 if not TESTING:
                     save_raw_response(response) 
 
@@ -242,7 +284,7 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str):
         
         prompts = generate_all_prompts(plan, topics, exam_name)
         
-        generated_questions, skipped_chunks = handle_generation(prompts, testing_mode)
+        generated_questions, skipped_chunks = handle_generation(prompts, testing_mode, exam_name)
         if not generated_questions:
              raise RuntimeError("No questions were successfully generated. Check logs for API errors or response format issues.")
         
@@ -260,13 +302,15 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str):
         print("\n✅ Mock Test Generation Completed.")
         
         generated_files = {"questions": questions_filename}
+        message = "Questions generated successfully."
         if skipped_chunks:
             generated_files["skipped"] = skipped_filename
 
         return {
             "success": True,
-            "message": "Questions generated successfully.",
+            "message": message,
             "files": generated_files
+            # "partial_success": bool(skipped_chunks)
         }
 
     except Exception as e:

@@ -1,8 +1,12 @@
+<!-- ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100-009688?style=for-the-badge&logo=fastapi) -->
+
 # 🎓 AceTrack: AI-Powered Study Planner & Mock Test Generator
 
 AceTrack is a full-stack web application designed to revolutionize how students prepare for competitive exams like JEE, NEET, and UGC NET. It provides a personalized preparation experience by leveraging the OpenAI API to generate dynamic mock tests and, in the future, intelligent study plans.
 
-![DashboardImage](image.png)
+![DashboardImage](assets/image.png)
 
 ## ✨ Key Features Implemented
 
@@ -39,7 +43,6 @@ The project uses a modern, scalable tech stack with a clear separation of concer
 The project is organized as a monorepo with two distinct, self-contained directories.
 
 ```
-/
 ├── backend/                    # All FastAPI and Python code
 │   ├── data/                   # Holds static data like the exam syllabus
 │   │   └── Syllabus.xlsx  

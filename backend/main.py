@@ -157,12 +157,14 @@ async def download_questions_file(
 
 @app.get("/")
 def read_root(): return {"message": "AceTrack API is running!"}
+
 @app.post("/signup", response_model=UserResponse)
 def signup(user: UserCreate, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, user.email)
     if db_user: raise HTTPException(status_code=400, detail="Email already registered")
     new_user = create_user(db, user)
     return UserResponse(id=new_user.id, email=new_user.email, has_completed_onboarding=new_user.has_completed_onboarding)
+
 @app.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, user.email)
@@ -170,11 +172,13 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     access_token = create_access_token(data={"sub": db_user.email, "user_id": db_user.id})
     return {"access_token": access_token, "token_type": "bearer", "user": {"id": db_user.id, "email": db_user.email, "has_completed_onboarding": db_user.has_completed_onboarding}}
+
 @app.get("/me", response_model=UserResponse)
 def get_current_user(current_user: dict = Depends(get_current_user_from_token), db: Session = Depends(get_db)):
     user = get_user_by_id(db, current_user["user_id"])
     if not user: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return UserResponse(id=user.id, email=user.email, has_completed_onboarding=user.has_completed_onboarding)
+
 @app.post("/onboarding", response_model=OnboardingResponse)
 def create_user_onboarding(onboarding_data: OnboardingCreate, current_user: dict = Depends(get_current_user_from_token), db: Session = Depends(get_db)):
     user_id = current_user["user_id"]
@@ -182,12 +186,14 @@ def create_user_onboarding(onboarding_data: OnboardingCreate, current_user: dict
     db_onboarding = create_onboarding_data(db, user_id, onboarding_data)
     update_user_onboarding_status(db, user_id, True)
     return db_onboarding
+
 @app.get("/onboarding", response_model=OnboardingResponse)
 def get_user_onboarding(current_user: dict = Depends(get_current_user_from_token), db: Session = Depends(get_db)):
     user_id = current_user["user_id"]
     onboarding_data = get_onboarding_data_by_user_id(db, user_id)
     if not onboarding_data: raise HTTPException(status_code=404, detail="Onboarding data not found")
     return onboarding_data
+
 @app.put("/onboarding", response_model=OnboardingResponse)
 def update_user_onboarding(onboarding_update: OnboardingUpdate, current_user: dict = Depends(get_current_user_from_token), db: Session = Depends(get_db)):
     user_id = current_user["user_id"]
@@ -198,6 +204,7 @@ def update_user_onboarding(onboarding_update: OnboardingUpdate, current_user: di
     except Exception as e:
         print(f"Error updating onboarding data: {e}")
         raise HTTPException(status_code=500, detail="Failed to update onboarding data")
+    
 @app.get("/onboarding/status")
 def check_onboarding_status(current_user: dict = Depends(get_current_user_from_token), db: Session = Depends(get_db)):
     user = get_user_by_id(db, current_user["user_id"])
