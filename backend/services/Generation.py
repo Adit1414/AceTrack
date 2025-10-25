@@ -222,6 +222,7 @@ def handle_generation(prompts, TESTING, exam_name):
     for qtype, prompt in prompts:
         print(f"Generating questions for type: {qtype}")
         generated_chunk = None
+        last_failed_chunk = []
         
         for attempt in range(max_retries_per_chunk):
             try:
@@ -231,6 +232,7 @@ def handle_generation(prompts, TESTING, exam_name):
                     save_raw_response(response) 
 
                 questions = [q.strip() for q in textwrap.dedent(response).split("--Question Starting--") if q.strip()]
+                last_failed_chunk = questions
                 
             #     if len(questions) != questions_per_chunk:
             #         print(f"⚠️ GPT returned {len(questions)} questions instead of {questions_per_chunk}. Skipping this chunk.")
@@ -261,7 +263,7 @@ def handle_generation(prompts, TESTING, exam_name):
         else:
             print(f"❌ Failed to generate a valid chunk for {qtype} after {max_retries_per_chunk} attempts. Skipping.")
             # Optionally, you could save the last failed response for debugging
-            skipped_chunks.append(f"Failed chunk for type: {qtype}")
+            skipped_chunks.append(last_failed_chunk)
             
     # random.shuffle(all_questions)
     return all_questions, skipped_chunks
@@ -285,32 +287,46 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str):
         prompts = generate_all_prompts(plan, topics, exam_name)
         
         generated_questions, skipped_chunks = handle_generation(prompts, testing_mode, exam_name)
-        if not generated_questions:
+        if not generated_questions and not skipped_chunks:
              raise RuntimeError("No questions were successfully generated. Check logs for API errors or response format issues.")
         
         # save_to_docx("\n\n".join(generated_questions), questions_filename)
-        save_to_pdf("\n\n".join(generated_questions), questions_filename)
-        
+        # save_to_pdf("\n\n".join(generated_questions), questions_filename)
+        generated_files = {}
+        message = ""
+        if generated_questions:
+            save_to_pdf("\n\n".join(generated_questions), questions_filename)
+            generated_files["questions"] = questions_filename
+            message = f"Successfully generated {len(generated_questions)} questions."
+            
         if skipped_chunks:
             skipped_text = "\n\n".join([
-                f"Skipped Chunk {i+1}:\n" + "\n\n".join(str(q) for q in chunk)
+                f"--- Skipped Chunk {i+1} ---:\n" + "\n\n".join(chunk)
                 for i, chunk in enumerate(skipped_chunks)
             ])
             # save_to_docx(skipped_text, skipped_filename)
             save_to_pdf(skipped_text, skipped_filename)
+            generated_files["skipped"] = skipped_filename
+            
+        if message and len(skipped_chunks)>0: # Add to existing message
+                message += f" Failed to generate {len(skipped_chunks)} chunk(s), which have been saved separately."
+        elif message:
+            pass
+        else: # Create new message
+                message = f"Failed to generate questions, but {len(skipped_chunks)} skipped chunk(s) were saved."
 
         print("\n✅ Mock Test Generation Completed.")
         
-        generated_files = {"questions": questions_filename}
-        message = "Questions generated successfully."
-        if skipped_chunks:
-            generated_files["skipped"] = skipped_filename
+        # generated_files = {"questions": questions_filename}
+        # message = "Questions generated successfully."
+        # if skipped_chunks:
+        #     generated_files["skipped"] = skipped_filename
 
         return {
             "success": True,
             "message": message,
             "files": generated_files
-            # "partial_success": bool(skipped_chunks)
+            # "partial_success": bool(skipped_chunks and generated_questions) # True only if we have both
         }
 
     except Exception as e:
