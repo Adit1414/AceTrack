@@ -25,12 +25,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
 
 # Build absolute paths to ensure files are always found
-# MODEL = 'gpt-4-turbo'
-MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
+MODEL = 'gpt-4-turbo'
+# MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
 SAVE_GENERATIONS_TO_DB = True
 # questions_per_chunk = 5 
 questions_per_chunk = 3 # change to 5 when on production level
-EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "Syllabus.xlsx")
+# EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "Syllabus.xlsx")
+EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "UGCSyllabus.xlsx")
 # Define the path to the backend/data directory
 BACKEND_DATA_DIR = os.path.join(PROJECT_ROOT, "backend", "data")
 
@@ -126,8 +127,6 @@ def save_to_pdf(content, filename):
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=11)
-        # Encode text to latin-1 for FPDF compatibility with standard fonts
-        # For full Unicode, you'd need to add a font like DejaVu
         encoded_content = content.encode('latin-1', 'replace').decode('latin-1')
         pdf.multi_cell(0, 5, txt=encoded_content)
         pdf.output(path)
@@ -171,7 +170,7 @@ def call_gpt(prompt, testing, exam_name, chunks, retries=3):
         raise ValueError("OPENAI_API_KEY environment variable not set.")
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    system_prompt = "You are a JEE Mains paper setter."
+    system_prompt = f"You are a {exam_name} paper setter."
     for attempt in range(retries):
         try:
             response = client.chat.completions.create(
@@ -270,7 +269,7 @@ def handle_generation(prompts, TESTING, exam_name):
 
 
 # === MAIN ENTRY POINT FOR BACKEND ===
-def run_generation_task(plan: dict, testing_mode: bool, exam_name: str):
+def run_generation_task(plan: dict, testing_mode: bool, exam_name: str, output_format: str):
     """Main function to be called by the FastAPI """
     try:
         print(f"Starting generation for {exam_name} with plan: {plan}")
@@ -278,8 +277,11 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str):
         run_id = uuid.uuid4().hex[:8]
         # questions_filename = f"Questions_{run_id}.docx"
         # skipped_filename = f"Skipped_{run_id}.docx"
-        questions_filename = f"Questions_{run_id}.pdf"
-        skipped_filename = f"Skipped_{run_id}.pdf"
+        extension = ".pdf" if output_format == 'pdf' else ".docx"
+        questions_filename = f"Questions_{run_id}{extension}"
+        skipped_filename = f"Skipped_{run_id}{extension}"
+        
+        save_function = save_to_pdf if output_format == 'pdf' else save_to_docx
 
         topics = load_all_topics()
         validate_topic_capacity(plan, topics)
@@ -295,7 +297,7 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str):
         generated_files = {}
         message = ""
         if generated_questions:
-            save_to_pdf("\n\n".join(generated_questions), questions_filename)
+            save_function("\n\n".join(generated_questions), questions_filename)
             generated_files["questions"] = questions_filename
             message = f"Successfully generated {len(generated_questions)} questions."
             
@@ -305,7 +307,7 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str):
                 for i, chunk in enumerate(skipped_chunks)
             ])
             # save_to_docx(skipped_text, skipped_filename)
-            save_to_pdf(skipped_text, skipped_filename)
+            save_function(skipped_text, skipped_filename)
             generated_files["skipped"] = skipped_filename
             
         if message and len(skipped_chunks)>0: # Add to existing message

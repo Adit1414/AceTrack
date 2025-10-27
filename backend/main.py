@@ -34,6 +34,7 @@ class QuestionGenerationRequest(BaseModel):
     question_plan: Dict[str, int]
     testing_mode: bool = False
     exam_name: str
+    output_format: str = 'pdf'
 
 class QuestionGenerationResponse(BaseModel):
     success: bool
@@ -99,7 +100,8 @@ async def generate_questions(
         result = run_generation_task(
             plan=request.question_plan,
             testing_mode=request.testing_mode,
-            exam_name=request.exam_name
+            exam_name=request.exam_name,
+            output_format=request.output_format
         )
         if result["success"]:
             return result

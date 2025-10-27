@@ -29,6 +29,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
 
   const exams = [
     'JEE (Joint Entrance Examination)',
+    'UGC-NET (University Grants Commission - National Eligibility Test)',
     'NEET (National Eligibility cum Entrance Test)',
     'UPSC (Union Public Service Commission)',
     'GATE (Graduate Aptitude Test in Engineering)',
@@ -45,7 +46,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
     { category: 'Physics', items: ['Mechanics', 'Thermodynamics', 'Optics', 'Electromagnetism', 'Modern Physics'] },
     { category: 'Chemistry', items: ['Organic Chemistry', 'Inorganic Chemistry', 'Physical Chemistry', 'Analytical Chemistry'] },
     { category: 'Biology', items: ['Cell Biology', 'Genetics', 'Ecology', 'Human Physiology', 'Plant Biology'] },
-    { category: 'General Studies', items: ['History', 'Geography', 'Politics', 'Economics', 'Current Affairs'] },
+    { category: 'General Studies', items: ['History', 'Geography', 'Polity', 'Economics', 'Current Affairs'] },
   ];
 
   const submitOnboardingData = async (data: OnboardingData) => {

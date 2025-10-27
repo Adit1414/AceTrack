@@ -42,6 +42,7 @@ interface QuestionGenerationRequest {
   question_plan: { [key: string]: number };
   testing_mode: boolean;
   exam_name: string;
+  output_format: 'pdf' | 'docx';
 }
 
 // --- HELPER FUNCTIONS ---
@@ -67,6 +68,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [questionPlan, setQuestionPlan] = useState<{ [key: string]: number }>({});
   const [testingMode, setTestingMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [outputFormat, setOutputFormat] = useState<'pdf' | 'docx'>('pdf');
   const [generationResult, setGenerationResult] = useState<{
     success: boolean;
     message: string;
@@ -173,7 +175,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       const request: QuestionGenerationRequest = {
         question_plan: Object.fromEntries(Object.entries(questionPlan).filter(([_, count]) => count > 0)),
         testing_mode: testingMode,
-        exam_name: examName
+        exam_name: examName,
+        output_format: outputFormat
       };
 
       const response = await fetch(`${API_BASE_URL}/api/generate-questions`, {
@@ -423,6 +426,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                     </div>
                   </label>
                 </div>
+
+                <div className="p-4 border-2 border-dashed border-gray-200 rounded-lg">
+                    <h4 className="font-medium text-gray-800 mb-2">Output Format</h4>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="outputFormat" value="pdf" checked={outputFormat === 'pdf'} onChange={() => setOutputFormat('pdf')} className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"/>
+                        <span className="text-sm text-gray-700">PDF</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="outputFormat" value="docx" checked={outputFormat === 'docx'} onChange={() => setOutputFormat('docx')} className="w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500"/>
+                        <span className="text-sm text-gray-700">DOCX</span>
+                      </label>
+                    </div>
+                  </div>
 
                 <div className="space-y-4">
                   {questionTypes.length > 0 ? questionTypes.map((qtype) => (
