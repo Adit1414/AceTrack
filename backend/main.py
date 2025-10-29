@@ -35,6 +35,7 @@ class QuestionGenerationRequest(BaseModel):
     testing_mode: bool = False
     exam_name: str
     output_format: str = 'pdf'
+    questions_per_chunk: int
 
 class QuestionGenerationResponse(BaseModel):
     success: bool
@@ -101,7 +102,8 @@ async def generate_questions(
             plan=request.question_plan,
             testing_mode=request.testing_mode,
             exam_name=request.exam_name,
-            output_format=request.output_format
+            output_format=request.output_format,
+            questions_per_chunk=request.questions_per_chunk
         )
         if result["success"]:
             return result

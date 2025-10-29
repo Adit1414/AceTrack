@@ -43,6 +43,7 @@ interface QuestionGenerationRequest {
   testing_mode: boolean;
   exam_name: string;
   output_format: 'pdf' | 'docx';
+  questions_per_chunk: number;
 }
 
 // --- HELPER FUNCTIONS ---
@@ -53,8 +54,8 @@ const formatFilenameForDisplay = (filename: string): string => {
   return 'Download File';
 };
 
-// const numQuestionsChunk = 5;
-const numQuestionsChunk = 3;
+const numQuestionsChunk = 5;
+// const numQuestionsChunk = 3;
 
 // --- MAIN COMPONENT ---
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
@@ -161,7 +162,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
     const invalidCounts = Object.entries(questionPlan).filter(([_, count]) => count > 0 && count % numQuestionsChunk !== 0);
     if (invalidCounts.length > 0) {
-      setGenerationResult({ success: false, message: 'All question counts must be multiples of 5.' });
+      setGenerationResult({ success: false, message: `All question counts must be multiples of ${numQuestionsChunk}.` });
       return;
     }
 
@@ -176,7 +177,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         question_plan: Object.fromEntries(Object.entries(questionPlan).filter(([_, count]) => count > 0)),
         testing_mode: testingMode,
         exam_name: examName,
-        output_format: outputFormat
+        output_format: outputFormat,
+        questions_per_chunk:numQuestionsChunk
       };
 
       const response = await fetch(`${API_BASE_URL}/api/generate-questions`, {
