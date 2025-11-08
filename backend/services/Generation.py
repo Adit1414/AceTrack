@@ -5,14 +5,15 @@ import textwrap
 import os
 import pandas as pd
 from docx import Document
-from fpdf import FPDF # NEW IMPORT
+from fpdf import FPDF
 from services.PromptsDict import prompt_templates
 from datetime import datetime
 import json
 import uuid
 import winsound
-from pymongo import MongoClient, errors # <-- NEW: Import MongoClient and errors
+from pymongo import MongoClient, errors
 from pymongo.errors import ConnectionFailure, OperationFailure
+from typing import List
 
 # ===============================================================
 # === ROBUST PATH CONFIGURATION ===
@@ -26,13 +27,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
 
 # Build absolute paths to ensure files are always found
-MODEL = 'gpt-4-turbo'
-# MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
-SAVE_GENERATIONS_TO_DB = True
+# MODEL = 'gpt-4-turbo'
+MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
+# SAVE_GENERATIONS_TO_DB = True
+SAVE_GENERATIONS_TO_DB = (MODEL == "gpt-4-turbo")
 # questions_per_chunk = 5 
 # questions_per_chunk = 3 # change to 5 when on production level
+
 # EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "Syllabus.xlsx")
-EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "UGCSyllabus.xlsx")
+# EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "UGCSyllabus.xlsx")
+
 # Define the path to the backend/data directory
 BACKEND_DATA_DIR = os.path.join(PROJECT_ROOT, "backend", "data")
 
@@ -65,21 +69,21 @@ except ConnectionFailure:
 # ===============================================================
 
 # === TOPIC LOADING AND PROMPT GENERATION ===
-def load_all_topics(excel_path=EXCEL_PATH):
-    """Loads and shuffles topics from the specified Excel file."""
-    if not os.path.exists(excel_path):
-        raise FileNotFoundError(f"Syllabus file not found at the expected path: {excel_path}. Please ensure it exists.")
-    try:
-        df = pd.read_excel(excel_path)
-        if df.empty or len(df.columns) == 0:
-            raise ValueError("Syllabus.xlsx is empty or has no columns.")
-        topic_column = df.columns[0]
-        topics = df[topic_column].dropna().tolist()
-        random.shuffle(topics)
-        return topics
-    except Exception as e:
-        # Catch other potential pandas errors
-        raise RuntimeError(f"Failed to read or process the Excel file at {excel_path}: {e}")
+# def load_all_topics(excel_path=EXCEL_PATH):
+#     """Loads and shuffles topics from the specified Excel file."""
+#     if not os.path.exists(excel_path):
+#         raise FileNotFoundError(f"Syllabus file not found at the expected path: {excel_path}. Please ensure it exists.")
+#     try:
+#         df = pd.read_excel(excel_path)
+#         if df.empty or len(df.columns) == 0:
+#             raise ValueError("Syllabus.xlsx is empty or has no columns.")
+#         topic_column = df.columns[0]
+#         topics = df[topic_column].dropna().tolist()
+#         random.shuffle(topics)
+#         return topics
+#     except Exception as e:
+#         # Catch other potential pandas errors
+#         raise RuntimeError(f"Failed to read or process the Excel file at {excel_path}: {e}")
 
 def validate_topic_capacity(plan, total_topics, questions_per_chunk: int):
     """Validates if there are enough topics for the requested questions."""
@@ -100,11 +104,14 @@ def generate_all_prompts(plan, topics, exam, questions_per_chunk: int):
     prompts = []
     topic_index = 0
     # questions_per_chunk = 5
+    
+    shuffled_topics = random.sample(topics, len(topics))
+    
     for qtype, count in plan.items():
-        if topic_index + ((count // questions_per_chunk) * questions_per_chunk) > len(topics):
+        if topic_index + ((count // questions_per_chunk) * questions_per_chunk) > len(shuffled_topics):
             raise ValueError("Topic index out of bounds. This indicates a logic error in topic validation.")
         for _ in range(count // questions_per_chunk):
-            chunk = topics[topic_index : topic_index + questions_per_chunk]
+            chunk = shuffled_topics[topic_index : topic_index + questions_per_chunk]
             topic_index += questions_per_chunk
             prompt = build_prompt_from_template(chunk, qtype, questions_per_chunk, exam)
             prompts.append((qtype, prompt))
@@ -289,7 +296,7 @@ def handle_generation(prompts, TESTING, exam_name, questions_per_chunk: int):
 
 
 # === MAIN ENTRY POINT FOR BACKEND ===
-def run_generation_task(plan: dict, testing_mode: bool, exam_name: str, output_format: str, questions_per_chunk: int):
+def run_generation_task(plan: dict, testing_mode: bool, exam_name: str, output_format: str, questions_per_chunk: int, topics: List[str]):
     """Main function to be called by the FastAPI """
     try:
         print(f"Starting generation for {exam_name} with plan: {plan}")
@@ -303,14 +310,15 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str, output_f
         
         save_function = save_to_pdf if output_format == 'pdf' else save_to_docx
 
-        topics = load_all_topics()
+        # topics = load_all_topics()
+        
         validate_topic_capacity(plan, topics, questions_per_chunk)
         
         prompts = generate_all_prompts(plan, topics, exam_name, questions_per_chunk)
         
         generated_questions, skipped_chunks = handle_generation(prompts, testing_mode, exam_name, questions_per_chunk)
         if not generated_questions and not skipped_chunks:
-             raise RuntimeError("No questions were successfully generated. Check logs for API errors or response format issues.")
+            raise RuntimeError("No questions were successfully generated. Check logs for API errors or response format issues.")
         
         # save_to_docx("\n\n".join(generated_questions), questions_filename)
         # save_to_pdf("\n\n".join(generated_questions), questions_filename)

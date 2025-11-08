@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, Date, JSON, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, Date, JSON, ForeignKey, ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -13,7 +13,11 @@ class User(Base):
     
     # Relationship with onboarding data
     onboarding = relationship("OnboardingData", back_populates="user", uselist=False)
-
+    
+    # --- NEW RELATIONSHIP ---
+    # This links the User to their many syllabuses
+    syllabuses = relationship("Syllabus", back_populates="owner", cascade="all, delete-orphan")
+    
 class OnboardingData(Base):
     __tablename__ = "onboarding_data"
     id = Column(Integer, primary_key=True, index=True)
@@ -32,3 +36,18 @@ class OnboardingData(Base):
     
     # Relationship with user
     user = relationship("User", back_populates="onboarding")
+    
+class Syllabus(Base):
+    __tablename__ = "syllabuses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True, nullable=False)
+    
+    # Store topics as an array of strings. This is much better than CSV.
+    topics = Column(ARRAY(String), nullable=False)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Foreign key to link this syllabus to a user
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("User", back_populates="syllabuses")
