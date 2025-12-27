@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Home, 
-  FileText, 
-  BookOpen, 
+import {
+  Home,
+  FileText,
+  BookOpen,
   Flame,
   CheckCircle2,
   Calendar,
@@ -75,10 +75,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'mockTest' | 'studyPlan'>('mockTest');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [onboardingData, setOnboardingData] = useState<any>(null);
-  
+
   // --- NEW: View routing state ---
   const [currentView, setCurrentView] = useState<'dashboard' | 'syllabus'>('dashboard');
-  
+
   // Generator State
   const [questionTypes, setQuestionTypes] = useState<QuestionType[]>([]);
   const [questionPlan, setQuestionPlan] = useState<{ [key: string]: number }>({});
@@ -98,7 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   // Calendar State
   const [currentDate, setCurrentDate] = useState(new Date());
-  
+
   // --- MODIFIED: Removed import.meta for compatibility ---
   const API_BASE_URL = 'http://localhost:8000';
 
@@ -118,10 +118,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch');
-      
+
       const data: Syllabus[] = await response.json();
       setSyllabuses(data);
-      
+
       if (data.length > 0) {
         // Default to the first syllabus in the list
         setSelectedSyllabusId(data[0].id);
@@ -147,7 +147,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       const response = await fetch(`${API_BASE_URL}/onboarding`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         const formattedData = {
@@ -155,8 +155,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           examDate: data.exam_date,
           topicsCovered: data.topics_covered || [],
           studyHours: data.daily_study_hours?.toString() || '',
-          studyDays: data.additional_notes?.includes('Study Days per Week:') 
-            ? data.additional_notes.split('Study Days per Week: ')[1] 
+          studyDays: data.additional_notes?.includes('Study Days per Week:')
+            ? data.additional_notes.split('Study Days per Week: ')[1]
             : '',
           currentPreparationLevel: data.current_preparation_level,
           preferredStudyTime: data.preferred_study_time,
@@ -205,7 +205,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       setGenerationResult({ success: false, message: 'Please select a syllabus first. Go to Syllabus Settings to upload one.' });
       return;
     }
-    
+
     const totalQuestions = Object.values(questionPlan).reduce((sum, count) => sum + count, 0);
     if (totalQuestions === 0) {
       setGenerationResult({ success: false, message: 'Please select at least one question type.' });
@@ -224,7 +224,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     try {
       const token = localStorage.getItem('access_token');
       const examName = onboardingData?.examName || 'General Exam';
-      
+
       const request: QuestionGenerationRequest = {
         question_plan: Object.fromEntries(Object.entries(questionPlan).filter(([_, count]) => count > 0)),
         testing_mode: testingMode,
@@ -241,6 +241,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       });
 
       const result = await response.json();
+      if (response.status === 403) {
+        setGenerationResult({
+          success: false,
+          message: result.detail // This will show your custom "Access Denied" message
+        });
+        return;
+      }
       if (!response.ok) {
         setGenerationResult({ success: false, message: result.detail || 'An unknown server error occurred.' });
       } else {
@@ -299,9 +306,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   // --- MOCK DATA & CALENDAR LOGIC ---
   // ... (studyTasks, streakDaysData, getDaysInMonth, etc. remain unchanged) ...
   const studyTasks = {
-    '2025-08-22': [ { task: 'Revise Math', duration: '2h', type: 'revision' }, { task: 'Practice PYQs', duration: '1h', type: 'practice' } ],
-    '2025-08-23': [ { task: 'Physics Chapter 3', duration: '3h', type: 'study' }, { task: 'Mock Test', duration: '2h', type: 'test' } ],
-    '2025-09-02': [ { task: 'Chemistry Ch. 1', duration: '2h', type: 'study' } ],
+    '2025-08-22': [{ task: 'Revise Math', duration: '2h', type: 'revision' }, { task: 'Practice PYQs', duration: '1h', type: 'practice' }],
+    '2025-08-23': [{ task: 'Physics Chapter 3', duration: '3h', type: 'study' }, { task: 'Mock Test', duration: '2h', type: 'test' }],
+    '2025-09-02': [{ task: 'Chemistry Ch. 1', duration: '2h', type: 'study' }],
   };
   const streakDaysData = ['2025-08-24', '2025-08-25', '2025-08-26', '2025-08-27', '2025-08-28'];
 
@@ -351,7 +358,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
     return days;
   };
-  
+
   const renderStreakCalendar = () => {
     // ... (this function is unchanged) ...
     const daysInMonth = getDaysInMonth(currentDate);
@@ -425,8 +432,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               )}
 
               {/* --- NEW: Syllabus Settings Button --- */}
-              <button 
-                onClick={() => setCurrentView(currentView === 'dashboard' ? 'syllabus' : 'dashboard')} 
+              <button
+                onClick={() => setCurrentView(currentView === 'dashboard' ? 'syllabus' : 'dashboard')}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium ${currentView === 'syllabus' ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'}`}
                 title="Syllabus Settings"
               >
@@ -477,7 +484,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       {/* --- MAIN CONTENT: Conditional Rendering --- */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentView === 'syllabus' ? (
-          <SyllabusPage 
+          <SyllabusPage
             API_BASE_URL={API_BASE_URL}
             onBack={() => setCurrentView('dashboard')}
             onSyllabusUploaded={fetchSyllabuses} // Pass the refresh function
@@ -532,7 +539,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                     </label>
                     <label className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-200 rounded-lg hover:border-cyan-400 transition-colors cursor-pointer">
                       {/* ... (Testing Mode checkbox is unchanged) ... */}
-                      <input type="checkbox" checked={testingMode} onChange={(e) => setTestingMode(e.target.checked)} className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"/>
+                      <input type="checkbox" checked={testingMode} onChange={(e) => setTestingMode(e.target.checked)} className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500" />
                       <div>
                         <h4 className="font-medium text-gray-800">Testing Mode</h4>
                         <p className="text-sm text-gray-600">Generate sample questions for testing (faster, uses mock data).</p>
@@ -543,11 +550,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                       <h4 className="font-medium text-gray-800 mb-2">Output Format</h4>
                       <div className="flex gap-4">
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="radio" name="outputFormat" value="pdf" checked={outputFormat === 'pdf'} onChange={() => setOutputFormat('pdf')} className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"/>
+                          <input type="radio" name="outputFormat" value="pdf" checked={outputFormat === 'pdf'} onChange={() => setOutputFormat('pdf')} className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
                           <span className="text-sm text-gray-700">PDF</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="radio" name="outputFormat" value="docx" checked={outputFormat === 'docx'} onChange={() => setOutputFormat('docx')} className="w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500"/>
+                          <input type="radio" name="outputFormat" value="docx" checked={outputFormat === 'docx'} onChange={() => setOutputFormat('docx')} className="w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500" />
                           <span className="text-sm text-gray-700">DOCX</span>
                         </label>
                       </div>
@@ -565,7 +572,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                           <h4 className="font-medium text-gray-800">{qtype.name}</h4>
                           <p className="text-sm text-gray-600">{qtype.description}</p>
                         </div>
-                        <input type="number" min="0" step={numQuestionsChunk} placeholder="0" value={questionPlan[qtype.name] || ''} onChange={(e) => handleQuestionCountChange(qtype.name, e.target.value)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-center"/>
+                        <input type="number" min="0" step={numQuestionsChunk} placeholder="0" value={questionPlan[qtype.name] || ''} onChange={(e) => handleQuestionCountChange(qtype.name, e.target.value)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-center" />
                       </div>
                     )) : (
                       <div className="text-center py-8"><Loader2 className="w-6 h-6 text-gray-400 animate-spin mx-auto" /><p className="mt-2 text-gray-500">Loading...</p></div>
@@ -599,8 +606,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                         </div>
                       </div>
                     )}
-                    <button 
-                      onClick={generateQuestions} 
+                    <button
+                      onClick={generateQuestions}
                       disabled={isGenerating || isSyllabusLoading || !selectedSyllabusId} // <-- MODIFIED disabled state
                       className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -613,7 +620,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               {activeTab === 'studyPlan' && (
                 <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
                   {/* ... (Study Plan content is unchanged) ... */}
-                   <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                       <Calendar className="w-6 h-6 text-purple-500" />
                       <h2 className="text-xl font-bold text-gray-800">Study Schedule</h2>
@@ -639,7 +646,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 </div>
               )}
             </div>
-            
+
             {/* --- RIGHT COLUMN: SIDEBAR WIDGETS --- */}
             <div className="space-y-6">
               {/* ... (Streak and Countdown widgets are unchanged) ... */}
@@ -661,7 +668,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   {renderStreakCalendar()}
                 </div>
               </div>
-              
+
               {daysUntilExam !== null && (
                 <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
                   <div className="flex items-center gap-3 mb-4">

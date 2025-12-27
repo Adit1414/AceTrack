@@ -107,6 +107,12 @@ async def generate_questions(
     db: Session = Depends(get_db)
 ):
     try:
+        user = db.query(User).filter(User.id == current_user["user_id"]).first()
+        if not user or not user.is_authorized:
+            raise HTTPException(
+                status_code=403, 
+                detail="Your account does not have generation permissions yet. Please contact support."
+            )
         # Fetch the syllabus to get the topics
         syllabus = get_syllabus_by_id(db, request.syllabus_id, current_user["user_id"])
         if not syllabus:

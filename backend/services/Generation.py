@@ -14,6 +14,7 @@ import winsound
 from pymongo import MongoClient, errors
 from pymongo.errors import ConnectionFailure, OperationFailure
 from typing import List
+import certifi
 
 # ===============================================================
 # === ROBUST PATH CONFIGURATION ===
@@ -28,9 +29,9 @@ PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
 
 # Build absolute paths to ensure files are always found
 # MODEL = 'gpt-4-turbo'
-MODEL = 'gpt-4.1-nano' #using smaller version for testing, use gpt-4-turbo during production
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4-turbo")
 # SAVE_GENERATIONS_TO_DB = True
-SAVE_GENERATIONS_TO_DB = (MODEL == "gpt-4-turbo")
+SAVE_GENERATIONS_TO_DB = os.getenv("SAVE_GENERATIONS_TO_DB", "true").lower() == "true"
 # questions_per_chunk = 5 
 # questions_per_chunk = 3 # change to 5 when on production level
 
@@ -39,7 +40,6 @@ SAVE_GENERATIONS_TO_DB = (MODEL == "gpt-4-turbo")
 
 # Define the path to the backend/data directory
 BACKEND_DATA_DIR = os.path.join(PROJECT_ROOT, "backend", "data")
-
 # Create the output directories inside backend/data
 OUTPUT_DIR = os.path.join(BACKEND_DATA_DIR, "generated_files")
 RAW_RESPONSES_DIR = os.path.join(BACKEND_DATA_DIR, "raw_responses")
@@ -54,17 +54,27 @@ os.makedirs(RAW_RESPONSES_DIR, exist_ok=True)
 try:
     MONGO_CONNECTION_STRING = os.getenv("MONGO_URI")
     if not MONGO_CONNECTION_STRING:
-        print("⚠️ MONGO_URI not set. Logging to MongoDB will be disabled.")
+        print("⚠️ MONGO_URI not set. Logging disabled.")
         mongo_client = None
     else:
-        mongo_client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000)
-        # Test the connection
+        # Added tlsAllowInvalidCertificates for local dev SSL issues
+        mongo_client = MongoClient(
+            MONGO_CONNECTION_STRING,
+            serverSelectionTimeoutMS=5000,
+            tls=True,
+            tlsCAFile=certifi.where(),
+            # This is the "hammer" - it ignores certificate errors entirely
+            tlsAllowInvalidCertificates=True,
+            # Forces the client to connect even if the primary isn't immediately clear
+            connectTimeoutMS=10000 
+        )
+        # Verify connection
         mongo_client.admin.command('ping')
         print("✅ MongoDB connection successful.")
-        db = mongo_client["acetrack_finetune_db"] # Your database name
-        finetune_collection = db["generation_logs"] # Your collection name
-except ConnectionFailure:
-    print("❌ MongoDB connection failed. Check connection string or network access.")
+        db = mongo_client["acetrack_finetune_db"]
+        finetune_collection = db["generation_logs"]
+except Exception as e:
+    print(f"❌ MongoDB connection failed: {type(e).__name__} - {e}")
     mongo_client = None
 # ===============================================================
 
@@ -346,7 +356,15 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str, output_f
                 message = f"Failed to generate questions, but {len(skipped_chunks)} skipped chunk(s) were saved."
 
         print("\n✅ Mock Test Generation Completed.")
-        winsound.PlaySound("CorrectHarp.wav", winsound.SND_FILENAME)
+        if os.name == 'nt': # 'nt' is Windows
+            try:
+                import winsound
+                winsound.PlaySound("CorrectHarp.wav", winsound.SND_FILENAME)
+            except Exception as e:
+                print(f"🟡 Windows notification sound failed: {e}")
+        else:
+            # In Linux/Container environments, we just log completion
+            print("🔔 Generation Task Finished")
         
         # generated_files = {"questions": questions_filename}
         # message = "Questions generated successfully."

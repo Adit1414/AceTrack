@@ -18,6 +18,8 @@ class User(Base):
     # This links the User to their many syllabuses
     syllabuses = relationship("Syllabus", back_populates="owner", cascade="all, delete-orphan")
     
+    is_authorized = Column(Boolean, default=False)
+    
 class OnboardingData(Base):
     __tablename__ = "onboarding_data"
     id = Column(Integer, primary_key=True, index=True)
