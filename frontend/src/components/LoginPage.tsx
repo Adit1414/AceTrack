@@ -15,7 +15,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSwitchToSignup }) => {
     password: '',
   });
 
-  const API_BASE_URL = "http://localhost:10000/api"; // You can move this to env later
+  // const API_BASE_URL = "http://localhost:10000/api"; // You can move this to env later
+  const API_BASE_URL = "https://acetrack-backend.onrender.com";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

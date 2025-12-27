@@ -58,7 +58,7 @@ class SyllabusResponse(BaseModel):
 # --- CORS Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "https://acetrack.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -268,6 +268,10 @@ def check_onboarding_status(current_user: dict = Depends(get_current_user_from_t
 app.include_router(api_router)
 
 # Root endpoint for health checks
-@app.get("/")
-def read_root(): 
+# @app.get("/")
+# def read_root(): 
+#     return {"message": "AceTrack API is running!"}
+# Change your existing @app.get("/") to this:
+@app.api_route("/", methods=["GET", "HEAD"])
+async def read_root(): 
     return {"message": "AceTrack API is running!"}

@@ -29,4 +29,6 @@ EXPOSE 10000
 
 # 9. Run the application
 # We use 0.0.0.0 so the server listens on all network interfaces
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+# Use shell format to expand the $PORT variable correctly
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}"]

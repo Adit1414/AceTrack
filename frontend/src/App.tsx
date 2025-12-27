@@ -27,7 +27,8 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // const API_BASE_URL = 'http://localhost:8000';
-  const API_BASE_URL = "http://localhost:10000/api";
+  // const API_BASE_URL = "http://localhost:10000/api";
+  const API_BASE_URL = "https://acetrack-backend.onrender.com";
 
   // Check if user is already logged in when app loads
   useEffect(() => {
