@@ -144,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}/onboarding`, {
+      const response = await fetch(`${API_BASE_URL}/api/onboarding`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

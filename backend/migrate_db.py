@@ -13,7 +13,7 @@ def run_migration():
             # Manually authorize your account (replace with your email)
             print("--- Authorizing admin user ---")
             # EDIT THIS LINE: Change 'vanneet@gmail.com' to your actual email
-            email_to_authorize = 'vanneet@gmail.com' 
+            email_to_authorize = 'rad@gmail.com' 
             connection.execute(text(f"UPDATE users SET is_authorized = TRUE WHERE email = '{email_to_authorize}';"))
             
             connection.commit()

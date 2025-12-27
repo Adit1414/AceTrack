@@ -25,7 +25,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
     studyDays: '',
   });
 
-  const API_BASE_URL = "http://localhost:10000";
+  const API_BASE_URL = "http://localhost:10000/api";
 
   const exams = [
     'JEE (Joint Entrance Examination)',
