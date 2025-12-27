@@ -1,17 +1,32 @@
-# backend/Dockerfile
-
-# Use an official Python runtime
+# 1. Use an official lightweight Python image
 FROM python:3.12-slim
 
-# Set the working directory
+# 2. Python-specific optimizations for containers
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# 3. Set the working directory inside the container
 WORKDIR /app
 
-# Copy and install dependencies
-COPY requirements.txt requirements.txt
+# 4. Install system dependencies for database drivers
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 5. Copy requirements first (leverages Docker cache for faster builds)
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
-COPY ./app /app
+# 6. Copy the rest of the application code
+COPY . .
 
-# Command to run the app
+# 7. Create local storage directories
+RUN mkdir -p data/generated_files data/raw_responses
+
+# 8. Expose the deployment port
+EXPOSE 10000
+
+# 9. Run the application
+# We use 0.0.0.0 so the server listens on all network interfaces
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]

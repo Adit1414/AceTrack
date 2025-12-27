@@ -10,7 +10,7 @@ from services.PromptsDict import prompt_templates
 from datetime import datetime
 import json
 import uuid
-import winsound
+# import winsound
 from pymongo import MongoClient, errors
 from pymongo.errors import ConnectionFailure, OperationFailure
 from typing import List
@@ -32,6 +32,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4-turbo")
 # SAVE_GENERATIONS_TO_DB = True
 SAVE_GENERATIONS_TO_DB = os.getenv("SAVE_GENERATIONS_TO_DB", "true").lower() == "true"
+API_KEY = os.getenv("API_KEY")
 # questions_per_chunk = 5 
 # questions_per_chunk = 3 # change to 5 when on production level
 
@@ -39,7 +40,8 @@ SAVE_GENERATIONS_TO_DB = os.getenv("SAVE_GENERATIONS_TO_DB", "true").lower() == 
 # EXCEL_PATH = os.path.join(SCRIPT_DIR, "..", "data", "UGCSyllabus.xlsx")
 
 # Define the path to the backend/data directory
-BACKEND_DATA_DIR = os.path.join(PROJECT_ROOT, "backend", "data")
+# BACKEND_DATA_DIR = os.path.join(PROJECT_ROOT, "backend", "data")
+BACKEND_DATA_DIR = "/app/data"
 # Create the output directories inside backend/data
 OUTPUT_DIR = os.path.join(BACKEND_DATA_DIR, "generated_files")
 RAW_RESPONSES_DIR = os.path.join(BACKEND_DATA_DIR, "raw_responses")
@@ -58,14 +60,22 @@ try:
         mongo_client = None
     else:
         # Added tlsAllowInvalidCertificates for local dev SSL issues
+        # mongo_client = MongoClient(
+        #     MONGO_CONNECTION_STRING,
+        #     serverSelectionTimeoutMS=5000,
+        #     tls=True,
+        #     tlsCAFile=certifi.where(),
+        #     # This is the "hammer" - it ignores certificate errors entirely
+        #     tlsAllowInvalidCertificates=True,
+        #     # Forces the client to connect even if the primary isn't immediately clear
+        #     connectTimeoutMS=10000 
+        # )
         mongo_client = MongoClient(
             MONGO_CONNECTION_STRING,
             serverSelectionTimeoutMS=5000,
             tls=True,
-            tlsCAFile=certifi.where(),
-            # This is the "hammer" - it ignores certificate errors entirely
+            tlsCAFile=certifi.where(), # Tells the container where the SSL certs are
             tlsAllowInvalidCertificates=True,
-            # Forces the client to connect even if the primary isn't immediately clear
             connectTimeoutMS=10000 
         )
         # Verify connection
@@ -154,8 +164,9 @@ def save_to_pdf(content, filename):
 def save_raw_response(text, folder=RAW_RESPONSES_DIR):
     """Saves the raw GPT response for debugging purposes."""
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    file_id = uuid.uuid4().hex[:6]
     # filename = f"gpt_response_{timestamp}.docx"
-    filename = f"gpt_response_{timestamp}.pdf"
+    filename = f"gpt_response_{timestamp}_{file_id}.pdf"
     path = os.path.join(folder, filename)
     # doc = Document()
     # doc.add_paragraph(text)
@@ -203,10 +214,10 @@ def call_gpt(prompt, testing, exam_name, chunks, retries=3):
             for i in range(chunks)
         ])
     
-    if not os.getenv("OPENAI_API_KEY"):
-        raise ValueError("OPENAI_API_KEY environment variable not set.")
+    # if not os.getenv("OPENAI_API_KEY"):
+    #     raise ValueError("OPENAI_API_KEY environment variable not set.")
 
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = OpenAI(api_key=API_KEY)
     system_prompt = f"You are a {exam_name} paper setter."
     for attempt in range(retries):
         try:
@@ -356,15 +367,16 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str, output_f
                 message = f"Failed to generate questions, but {len(skipped_chunks)} skipped chunk(s) were saved."
 
         print("\n✅ Mock Test Generation Completed.")
-        if os.name == 'nt': # 'nt' is Windows
-            try:
-                import winsound
-                winsound.PlaySound("CorrectHarp.wav", winsound.SND_FILENAME)
-            except Exception as e:
-                print(f"🟡 Windows notification sound failed: {e}")
-        else:
-            # In Linux/Container environments, we just log completion
-            print("🔔 Generation Task Finished")
+        
+        # if os.name == 'nt': # 'nt' is Windows
+        #     try:
+        #         import winsound
+        #         winsound.PlaySound("CorrectHarp.wav", winsound.SND_FILENAME)
+        #     except Exception as e:
+        #         print(f"🟡 Windows notification sound failed: {e}")
+        # else:
+        #     # In Linux/Container environments, we just log completion
+        #     print("🔔 Generation Task Finished")
         
         # generated_files = {"questions": questions_filename}
         # message = "Questions generated successfully."

@@ -26,7 +26,8 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:8000';
+  // const API_BASE_URL = 'http://localhost:8000';
+  const API_BASE_URL = "http://localhost:10000/api";
 
   // Check if user is already logged in when app loads
   useEffect(() => {
