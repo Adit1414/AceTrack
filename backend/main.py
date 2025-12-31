@@ -124,10 +124,10 @@ async def generate_questions(
             questions_per_chunk=request.questions_per_chunk,
             topics=syllabus.topics
         )
-        if result["success"]:
-            return result
-        else:
+        if not result["success"]:
             raise HTTPException(status_code=500, detail=result["message"])
+
+        return result
     except HTTPException:
         raise
     except Exception as e:

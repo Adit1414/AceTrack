@@ -597,7 +597,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                             {generationResult.success && generationResult.files && (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 {Object.entries(generationResult.files).map(([key, filename]) => (
-                                  <button key={key} onClick={() => downloadFile(filename)} className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                                  <button key={key} onClick={() => window.open(filename, '_blank')} className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
                                     <Download className="w-4 h-4" /> {formatFilenameForDisplay(filename)}
                                   </button>
                                 ))}

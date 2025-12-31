@@ -15,6 +15,8 @@ from pymongo import MongoClient, errors
 from pymongo.errors import ConnectionFailure, OperationFailure
 from typing import List
 import certifi
+import cloudinary
+import cloudinary.uploader
 
 # ===============================================================
 # === ROBUST PATH CONFIGURATION ===
@@ -87,7 +89,12 @@ except Exception as e:
     print(f"❌ MongoDB connection failed: {type(e).__name__} - {e}")
     mongo_client = None
 # ===============================================================
-
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
 # === TOPIC LOADING AND PROMPT GENERATION ===
 # def load_all_topics(excel_path=EXCEL_PATH):
 #     """Loads and shuffles topics from the specified Excel file."""
@@ -347,8 +354,20 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str, output_f
         message = ""
         if generated_questions:
             save_function("\n\n".join(generated_questions), questions_filename)
-            generated_files["questions"] = questions_filename
-            message = f"Successfully generated {len(generated_questions)} questions."
+            # --- CLOUDINARY UPLOAD: Questions ---
+            try:
+                print(f"Uploading {questions_filename} to Cloudinary...")
+                upload_questions = cloudinary.uploader.upload(
+                    os.path.join(OUTPUT_DIR, questions_filename),
+                    resource_type="raw",
+                    public_id=f"ace-track/{questions_filename}"
+                )
+                # Store the Cloudinary URL instead of the local filename
+                generated_files["questions"] = upload_questions.get("secure_url")
+                message = f"Successfully generated {len(generated_questions)} questions."
+            except Exception as u_err:
+                print(f"⚠️ Cloudinary upload failed for questions: {u_err}")
+                generated_files["questions"] = questions_filename # Fallback to filename
             
         if skipped_chunks:
             skipped_text = "\n\n".join([
@@ -357,7 +376,18 @@ def run_generation_task(plan: dict, testing_mode: bool, exam_name: str, output_f
             ])
             # save_to_docx(skipped_text, skipped_filename)
             save_function(skipped_text, skipped_filename)
-            generated_files["skipped"] = skipped_filename
+            # --- CLOUDINARY UPLOAD: Skipped ---
+            try:
+                upload_skipped = cloudinary.uploader.upload(
+                    os.path.join(OUTPUT_DIR, skipped_filename),
+                    resource_type="raw",
+                    public_id=f"ace-track/{skipped_filename}"
+                )
+                generated_files["skipped"] = upload_skipped.get("secure_url")
+            except Exception as u_err:
+                print(f"⚠️ Cloudinary upload failed for skipped chunks: {u_err}")
+                generated_files["skipped"] = skipped_filename # Fallback
+            
             
         if message and len(skipped_chunks)>0: # Add to existing message
                 message += f" Failed to generate {len(skipped_chunks)} chunk(s), which have been saved separately."
