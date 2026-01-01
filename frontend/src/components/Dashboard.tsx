@@ -66,8 +66,8 @@ const formatFilenameForDisplay = (filename: string): string => {
   return 'Download File';
 };
 
-const numQuestionsChunk = 3;
-// const numQuestionsChunk = 5;
+// const numQuestionsChunk = 3;
+const numQuestionsChunk = 5;
 
 // --- MAIN COMPONENT ---
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
