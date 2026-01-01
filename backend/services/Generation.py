@@ -33,7 +33,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
 # MODEL = 'gpt-4-turbo'
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4-turbo")
 # SAVE_GENERATIONS_TO_DB = True
-SAVE_GENERATIONS_TO_DB = os.getenv("SAVE_GENERATIONS_TO_DB", "true").lower() == "true"
+SAVE_GENERATIONS_TO_DB = True
 API_KEY = os.getenv("API_KEY")
 # questions_per_chunk = 5 
 # questions_per_chunk = 3 # change to 5 when on production level
