@@ -3,7 +3,7 @@
 .PHONY: all backend frontend dev
 
 backend:
-	cd backend && .\venv\Scripts\activate.bat && uvicorn main:app --reload --port 10000
+	cd backend && .\venv\Scripts\activate && uvicorn main:app --reload --port 10000
 
 
 

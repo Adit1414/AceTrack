@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base
 from models import User
 from schemas import (
-    UserCreate, UserLogin, UserResponse,
+    UserCreate, UserLogin, UserResponse, GoogleLoginRequest,
     OnboardingCreate, OnboardingResponse, OnboardingUpdate,
     StudyPlanCreateRequest, StudyPlanOut, DailyTaskOut,
     TaskUpdateRequest, RegeneratePlanRequest, SubjectProgressOut
@@ -34,6 +34,8 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel
 import os
 from datetime import date as date_type
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 # Since uvicorn runs from 'src', Python can find MockTestAutomation directly
 from services.mocktest.Generation import run_generation_task
@@ -374,6 +376,45 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             "id": db_user.id, "email": db_user.email, "has_completed_onboarding": db_user.has_completed_onboarding
         }
     }
+
+@api_router.post("/auth/google")
+def google_auth(request: GoogleLoginRequest, db: Session = Depends(get_db)):
+    try:
+        # Verify the token
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        if not client_id:
+            raise HTTPException(status_code=500, detail="Google Client ID not configured")
+            
+        idinfo = id_token.verify_oauth2_token(
+            request.credential, google_requests.Request(), client_id
+        )
+
+        email = idinfo.get("email")
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not provided by Google")
+            
+        # Check if user exists
+        db_user = get_user_by_email(db, email)
+        if not db_user:
+            # Create user with random password since they authenticate via Google
+            import secrets
+            random_password = secrets.token_urlsafe(16)
+            user_create = UserCreate(email=email, password=random_password)
+            db_user = create_user(db, user_create)
+            
+        # Log user in
+        access_token = create_access_token(data={"sub": db_user.email, "user_id": db_user.id})
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer", 
+            "user": {
+                "id": db_user.id, 
+                "email": db_user.email, 
+                "has_completed_onboarding": db_user.has_completed_onboarding
+            }
+        }
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
 
 @api_router.get("/me", response_model=UserResponse)
 def get_current_user(current_user: dict = Depends(get_current_user_from_token), db: Session = Depends(get_db)):
