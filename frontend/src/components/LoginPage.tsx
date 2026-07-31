@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, BookOpen, Target, TrendingUp } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
+import { API_BASE_URL } from '../config';
 
 interface LoginPageProps {
   onLogin: (userData: { id: number; email: string; token: string; hasCompletedOnboarding: boolean }) => void;
@@ -15,8 +17,39 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSwitchToSignup }) => {
     password: '',
   });
 
-  // const API_BASE_URL = "http://localhost:10000/api"; // You can move this to env later
-  const API_BASE_URL = "https://acetrack-backend.onrender.com";
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          credential: credentialResponse.credential,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Google Login failed');
+      }
+
+      localStorage.setItem('access_token', data.access_token);
+      onLogin({
+        id: data.user.id,
+        email: data.user.email,
+        token: data.access_token,
+        hasCompletedOnboarding: data.user.has_completed_onboarding
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,6 +196,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSwitchToSignup }) => {
               <div className="relative flex justify-center text-sm">
                 <span className="px-4 bg-white text-gray-500 font-medium">OR</span>
               </div>
+            </div>
+
+            {/* Google Login */}
+            <div className="flex justify-center mb-6">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError('Google Login failed')}
+                useOneTap
+              />
             </div>
 
             {/* Sign Up Link */}

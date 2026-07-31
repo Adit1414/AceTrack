@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, BookOpen, Target, TrendingUp } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
+import { API_BASE_URL } from '../config';
 
 interface SignupPageProps {
   onSignup: (userData: { id: number; email: string }) => void;
@@ -18,8 +20,41 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSignup, onSwitchToLogin }) =>
     confirmPassword: '',
   });
 
-  // const API_BASE_URL = "http://localhost:10000/api";
-  const API_BASE_URL = "https://acetrack-backend.onrender.com";
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          credential: credentialResponse.credential,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Google Signup failed');
+      }
+
+      // Success for Google Auth doesn't just sign up, it logs in, so we switch to login
+      // Or we can just call onSignup with the returned data, but it's identical to login.
+      // Let's just simulate the signup behavior.
+      setSuccess(true);
+      setFormData({ email: '', password: '', confirmPassword: '' });
+      onSignup({
+        id: data.user.id,
+        email: data.user.email,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google Signup failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +77,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSignup, onSwitchToLogin }) =>
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/signup`, {
+      const response = await fetch(`${API_BASE_URL}/api/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,6 +260,15 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSignup, onSwitchToLogin }) =>
               <div className="relative flex justify-center text-sm">
                 <span className="px-4 bg-white text-gray-500 font-medium">OR</span>
               </div>
+            </div>
+
+            {/* Google Login */}
+            <div className="flex justify-center mb-6">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError('Google Signup failed')}
+                useOneTap
+              />
             </div>
 
             {/* Login Link */}

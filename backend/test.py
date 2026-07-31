@@ -3,9 +3,7 @@ from sqlalchemy.orm import sessionmaker
 
 def main():
     # Create SQLAlchemy engine using the same connection string
-    engine = create_engine(
-        'postgresql://avnadmin:AVNS_DRQSnzUgaVC4P-VdeS8@pg-220bcba-aditverma1407-337a.d.aivencloud.com:19074/defaultdb?sslmode=require'
-    )
+    engine = create_engine('')
     
     # Method 1: Using engine.connect() (similar to your psycopg2 approach)
     with engine.connect() as conn:
