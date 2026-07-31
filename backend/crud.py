@@ -1,9 +1,11 @@
 from sqlalchemy.orm import Session
-from models import User, OnboardingData, Syllabus
+from sqlalchemy import func
+from models import User, OnboardingData, Syllabus, StudyPlan, DailyTask, SubjectProgress
 from schemas import UserCreate, OnboardingCreate, OnboardingUpdate
 from auth import hash_password
 import pandas as pd
-from typing import List, IO
+from typing import List, IO, Dict, Optional
+from datetime import date, datetime
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
@@ -127,3 +129,205 @@ def delete_syllabus_by_id(db: Session, syllabus_id: int, user_id: int) -> bool:
         db.commit()
         return True
     return False
+
+
+# ============================================================
+# === STUDY PLANNER CRUD ===
+# ============================================================
+
+def create_study_plan(
+    db: Session,
+    user_id: int,
+    exam_name: str,
+    target_exam_date: date,
+    daily_available_hours: float,
+) -> StudyPlan:
+    """Creates a new active study plan for a user."""
+    plan = StudyPlan(
+        user_id=user_id,
+        exam_name=exam_name,
+        target_exam_date=target_exam_date,
+        daily_available_hours=daily_available_hours,
+        status="active",
+    )
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+def get_active_plan(db: Session, user_id: int) -> Optional[StudyPlan]:
+    """Returns the active study plan for a user, or None."""
+    return (
+        db.query(StudyPlan)
+        .filter(StudyPlan.user_id == user_id, StudyPlan.status == "active")
+        .first()
+    )
+
+
+def get_plan_by_id(db: Session, plan_id: int, user_id: int) -> Optional[StudyPlan]:
+    """Returns a specific plan, verifying ownership."""
+    return (
+        db.query(StudyPlan)
+        .filter(StudyPlan.id == plan_id, StudyPlan.user_id == user_id)
+        .first()
+    )
+
+
+def bulk_create_tasks(db: Session, plan_id: int, tasks: List[Dict]) -> List[DailyTask]:
+    """
+    Bulk inserts daily tasks from the LLM-parsed schedule.
+    Each task dict: {date, subject, topic, estimated_hours, priority, status}
+    """
+    db_tasks = [
+        DailyTask(
+            plan_id=plan_id,
+            date=t["date"],
+            subject=t["subject"],
+            topic=t["topic"],
+            estimated_hours=t["estimated_hours"],
+            priority=t.get("priority", 3),
+            status="pending",
+        )
+        for t in tasks
+    ]
+    db.bulk_save_objects(db_tasks)
+    db.commit()
+    # Reload with IDs
+    return db.query(DailyTask).filter(DailyTask.plan_id == plan_id).order_by(DailyTask.date).all()
+
+
+def get_tasks_by_date(db: Session, plan_id: int, query_date: date) -> List[DailyTask]:
+    """Returns all tasks for a specific plan on a given date."""
+    return (
+        db.query(DailyTask)
+        .filter(DailyTask.plan_id == plan_id, DailyTask.date == query_date)
+        .order_by(DailyTask.priority)
+        .all()
+    )
+
+
+def update_task_status(
+    db: Session, task_id: int, user_id: int, new_status: str
+) -> Optional[DailyTask]:
+    """
+    Updates a task status after verifying the task belongs to the user.
+    Returns None if not found or ownership check fails (treat as 404).
+    """
+    task = (
+        db.query(DailyTask)
+        .join(StudyPlan, DailyTask.plan_id == StudyPlan.id)
+        .filter(DailyTask.id == task_id, StudyPlan.user_id == user_id)
+        .first()
+    )
+    if not task:
+        return None
+
+    task.status = new_status
+    task.completed_at = datetime.utcnow() if new_status == "done" else None
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def get_subject_progress(db: Session, user_id: int) -> List[Dict]:
+    """
+    Returns per-subject progress: tasks_done, tasks_total, mastery_level.
+    Joins SubjectProgress with DailyTask counts via active plan.
+    """
+    active_plan = get_active_plan(db, user_id)
+    if not active_plan:
+        return []
+
+    # Total tasks per subject
+    total_q = (
+        db.query(DailyTask.subject, func.count(DailyTask.id).label("total"))
+        .filter(DailyTask.plan_id == active_plan.id)
+        .group_by(DailyTask.subject)
+        .all()
+    )
+
+    # Done tasks per subject
+    done_q = (
+        db.query(DailyTask.subject, func.count(DailyTask.id).label("done"))
+        .filter(DailyTask.plan_id == active_plan.id, DailyTask.status == "done")
+        .group_by(DailyTask.subject)
+        .all()
+    )
+
+    total_map = {row.subject: row.total for row in total_q}
+    done_map = {row.subject: row.done for row in done_q}
+
+    progress_records = (
+        db.query(SubjectProgress)
+        .filter(SubjectProgress.user_id == user_id)
+        .all()
+    )
+
+    result = []
+    result = []
+    for sp in progress_records:
+        subj = sp.subject
+        clean_subj = subj if subj else "General"
+        result.append({
+            "subject": clean_subj,
+            "weightage_score": float(sp.weightage_score) if sp.weightage_score is not None else 1.0,
+            "mastery_level": sp.mastery_level if sp.mastery_level is not None else "mastered",
+            "tasks_completed": int(done_map.get(subj, 1)),
+            "tasks_total": int(total_map.get(subj, 1)),
+        })
+
+    return result
+
+def delete_subject_progress(db: Session, user_id: int, subject: str):
+    db.query(SubjectProgress).filter(
+        SubjectProgress.user_id == user_id,
+        SubjectProgress.subject == subject
+    ).delete()
+    db.commit()
+
+
+def upsert_subject_progress(
+    db: Session,
+    user_id: int,
+    subject: str,
+    mastery_level: str,
+    weightage_score: float = 1.0,
+) -> SubjectProgress:
+    """Creates or updates a SubjectProgress row for the given user+subject."""
+    existing = (
+        db.query(SubjectProgress)
+        .filter(
+            SubjectProgress.user_id == user_id,
+            SubjectProgress.subject == subject,
+        )
+        .first()
+    )
+    if existing:
+        existing.mastery_level = mastery_level
+        existing.weightage_score = weightage_score
+        existing.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(existing)
+        return existing
+    else:
+        sp = SubjectProgress(
+            user_id=user_id,
+            subject=subject,
+            weightage_score=weightage_score,
+            mastery_level=mastery_level,
+        )
+        db.add(sp)
+        db.commit()
+        db.refresh(sp)
+        return sp
+
+
+def archive_active_plan(db: Session, user_id: int) -> Optional[StudyPlan]:
+    """Archives any existing active plan for a user before creating a new one."""
+    plan = get_active_plan(db, user_id)
+    if plan:
+        plan.status = "archived"
+        db.commit()
+        db.refresh(plan)
+    return plan

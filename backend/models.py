@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, Date, JSON, ForeignKey, ARRAY
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, Date, JSON, ForeignKey, ARRAY, Float
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -18,7 +18,7 @@ class User(Base):
     # This links the User to their many syllabuses
     syllabuses = relationship("Syllabus", back_populates="owner", cascade="all, delete-orphan")
     
-    is_authorized = Column(Boolean, default=False)
+    is_authorized = Column(Boolean, default=True)
     
 class OnboardingData(Base):
     __tablename__ = "onboarding_data"
@@ -53,3 +53,53 @@ class Syllabus(Base):
     # Foreign key to link this syllabus to a user
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="syllabuses")
+
+# --- STUDY PLANNER MODELS ---
+
+class SyllabusTopic(Base):
+    __tablename__ = "syllabus_topics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    subject = Column(String, nullable=False)
+    topic = Column(String, nullable=False)
+    weightage = Column(Float, default=1.0, nullable=False)
+
+class StudyPlan(Base):
+    __tablename__ = "study_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    exam_name = Column(String, nullable=False)
+    target_exam_date = Column(Date, nullable=False)
+    daily_available_hours = Column(Float, nullable=False)
+    status = Column(String, default="active", nullable=False)  # active, completed, archived
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    tasks = relationship("DailyTask", back_populates="plan", cascade="all, delete-orphan")
+
+class DailyTask(Base):
+    __tablename__ = "daily_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plan_id = Column(Integer, ForeignKey("study_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    date = Column(Date, nullable=False, index=True)
+    subject = Column(String, nullable=False)
+    topic = Column(String, nullable=False)
+    estimated_hours = Column(Float, nullable=False)
+    priority = Column(Integer, default=3, nullable=False)  # 1 (highest) to 5 (lowest)
+    status = Column(String, default="pending", nullable=False)  # pending, done, skipped
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    plan = relationship("StudyPlan", back_populates="tasks")
+
+class SubjectProgress(Base):
+    __tablename__ = "subject_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    subject = Column(String, nullable=False)
+    weightage_score = Column(Float, default=1.0, nullable=False)
+    mastery_level = Column(String, default="moderate", nullable=False)  # weak, moderate, strong
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

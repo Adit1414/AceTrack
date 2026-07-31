@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Calendar, Clock, BookOpen, Target, Sparkles } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 interface OnboardingData {
   examName: string;
@@ -24,9 +25,6 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
     studyHours: '',
     studyDays: '',
   });
-
-  // const API_BASE_URL = "http://localhost:10000/api";
-  const API_BASE_URL = "https://acetrack-backend.onrender.com";
 
   const exams = [
     'JEE (Joint Entrance Examination)',
@@ -71,7 +69,7 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
 
     console.log('Sending onboarding data:', backendData); // Debug log
 
-    const response = await fetch(`${API_BASE_URL}/onboarding`, {
+    const response = await fetch(`${API_BASE_URL}/api/onboarding`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

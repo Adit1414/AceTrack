@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import {
   Home,
   FileText,
@@ -22,6 +23,7 @@ import {
   BookMarked // <-- NEW ICON
 } from 'lucide-react';
 import { SyllabusPage } from './SyllabusPage'; // <-- IMPORT NEW PAGE
+import StudyPlanPage from './StudyPlanPage'; // <-- STUDY PLANNER
 
 // --- INTERFACES ---
 interface User {
@@ -66,8 +68,34 @@ const formatFilenameForDisplay = (filename: string): string => {
   return 'Download File';
 };
 
-// const numQuestionsChunk = 3;
-const numQuestionsChunk = 5;
+const handleFileDownload = async (filename: string) => {
+  if (filename.startsWith('http://') || filename.startsWith('https://')) {
+    window.open(filename, '_blank');
+  } else {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/api/download-questions/${filename}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading file:', err);
+      alert('Failed to download file.');
+    }
+  }
+};
+
+const numQuestionsChunk = 3;
+// const numQuestionsChunk = 5;
 
 // --- MAIN COMPONENT ---
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
@@ -96,19 +124,35 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [selectedSyllabusId, setSelectedSyllabusId] = useState<number | null>(null);
   const [isSyllabusLoading, setIsSyllabusLoading] = useState(true);
 
+  // --- NEW: Syllabus subjects state ---
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+
   // Calendar State
   const [currentDate, setCurrentDate] = useState(new Date());
-
-  // --- MODIFIED: Removed import.meta for compatibility ---
-  // const API_BASE_URL = "http://localhost:10000";
-  const API_BASE_URL = "https://acetrack-backend.onrender.com";
 
   // --- EFFECTS ---
   useEffect(() => {
     loadQuestionTypes();
     loadOnboardingData();
     fetchSyllabuses(); // <-- Load syllabuses on init
+    fetchSyllabusSubjects();
   }, []);
+
+  const fetchSyllabusSubjects = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/api/syllabus-subjects`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const subjects = await response.json();
+        setAvailableSubjects(subjects);
+      }
+    } catch (error) {
+      console.error('Error fetching syllabus subjects:', error);
+    }
+  };
 
   // --- API CALLS ---
   const fetchSyllabuses = async () => {
@@ -232,7 +276,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         exam_name: examName,
         output_format: outputFormat,
         questions_per_chunk: numQuestionsChunk,
-        syllabus_id: selectedSyllabusId // <-- PASS THE ID
+        syllabus_id: selectedSyllabusId, // <-- PASS THE ID
+        subjects: selectedSubjects.length > 0 ? selectedSubjects : undefined
       };
 
       const response = await fetch(`${API_BASE_URL}/api/generate-questions`, {
@@ -533,6 +578,35 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                     )}
                   </div>
 
+                  {/* --- NEW: Subject Selector --- */}
+                  {availableSubjects.length > 0 && (
+                    <div className="my-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Filter by Subjects (Optional)
+                      </label>
+                      <div className="flex flex-wrap gap-3">
+                        {availableSubjects.map((subj) => (
+                          <label key={subj} className="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input 
+                              type="checkbox" 
+                              checked={selectedSubjects.includes(subj)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedSubjects([...selectedSubjects, subj]);
+                                } else {
+                                  setSelectedSubjects(selectedSubjects.filter(s => s !== subj));
+                                }
+                              }}
+                              className="w-4 h-4 text-cyan-600 rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-800">{subj}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">If none selected, it uses all subjects in your syllabus.</p>
+                    </div>
+                  )}
+
                   {/* --- Other Options --- */}
                   <div className="my-6 space-y-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -597,7 +671,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                             {generationResult.success && generationResult.files && (
                               <div className="mt-3 flex flex-wrap gap-2">
                                 {Object.entries(generationResult.files).map(([key, filename]) => (
-                                  <button key={key} onClick={() => window.open(filename, '_blank')} className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                                  <button key={key} onClick={() => handleFileDownload(filename)} className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
                                     <Download className="w-4 h-4" /> {formatFilenameForDisplay(filename)}
                                   </button>
                                 ))}
@@ -620,30 +694,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
               {activeTab === 'studyPlan' && (
                 <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                  {/* ... (Study Plan content is unchanged) ... */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="w-6 h-6 text-purple-500" />
-                      <h2 className="text-xl font-bold text-gray-800">Study Schedule</h2>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))} className="p-2 rounded-lg hover:bg-gray-100"><ChevronLeft className="w-5 h-5 text-gray-600" /></button>
-                      <h3 className="text-lg font-semibold text-gray-800 w-36 text-center">{currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h3>
-                      <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))} className="p-2 rounded-lg hover:bg-gray-100"><ChevronRight className="w-5 h-5 text-gray-600" /></button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-7 border-l border-b border-gray-100">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                      <div key={day} className="bg-gray-50 p-3 text-center text-sm font-medium text-gray-700 border-t border-r border-gray-100">{day}</div>
-                    ))}
-                    {renderStudyPlanCalendar()}
-                  </div>
-                  <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-cyan-500"></div><span className="text-sm text-gray-600">Study</span></div>
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-pink-500"></div><span className="text-sm text-gray-600">Practice</span></div>
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-purple-500"></div><span className="text-sm text-gray-600">Revision</span></div>
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-amber-500"></div><span className="text-sm text-gray-600">Test</span></div>
-                  </div>
+                  <StudyPlanPage token={localStorage.getItem('access_token') || ''} />
                 </div>
               )}
             </div>

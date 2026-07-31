@@ -3,6 +3,7 @@ import LoginPage from './components/LoginPage';
 import SignupPage from './components/SignupPage';
 import OnboardingPage from './components/OnboardingPage';
 import Dashboard from './components/Dashboard';
+import { API_BASE_URL } from './config';
 
 // Types for user data
 interface User {
@@ -26,10 +27,6 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // const API_BASE_URL = 'http://localhost:8000';
-  // const API_BASE_URL = "http://localhost:10000/api";
-  const API_BASE_URL = "https://acetrack-backend.onrender.com";
-
   // Check if user is already logged in when app loads
   useEffect(() => {
     const checkExistingAuth = async () => {
@@ -42,7 +39,7 @@ const App: React.FC = () => {
 
       try {
         // Verify token with backend and get user info
-        const response = await fetch(`${API_BASE_URL}/me`, {
+        const response = await fetch(`${API_BASE_URL}/api/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -115,10 +112,30 @@ const App: React.FC = () => {
   };
 
   // Handle successful signup
-  const handleSignup = (userData: { id: number; email: string }) => {
-    console.log('User account created:', userData);
-    // After successful signup, switch to login page
-    setShowSignup(false);
+  const handleSignup = (userData: { id: number; email: string; token?: string; hasCompletedOnboarding?: boolean }) => {
+    // If signup came with a token (e.g., Google OAuth), log the user in directly
+    if (userData.token) {
+      const newUser: User = {
+        id: userData.id,
+        email: userData.email,
+        token: userData.token,
+        hasCompletedOnboarding: userData.hasCompletedOnboarding ?? false
+      };
+      localStorage.setItem('access_token', userData.token);
+      localStorage.setItem('user_data', JSON.stringify({
+        id: userData.id,
+        email: userData.email,
+        hasCompletedOnboarding: userData.hasCompletedOnboarding ?? false
+      }));
+      setUser(newUser);
+      if (!userData.hasCompletedOnboarding) {
+        setShowOnboarding(true);
+      }
+    } else {
+      // Standard email/password signup — just go to login page
+      console.log('User account created:', userData);
+      setShowSignup(false);
+    }
   };
 
   // Handle onboarding completion
