@@ -7,12 +7,23 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
 
+class QuestionType(BaseModel):
+    name: str
+    description: str
+
+class TestFeedbackRequest(BaseModel):
+    score: int
+    total: int
+    exam_name: str
+    results: List[dict]
+
+class TestFeedbackResponse(BaseModel):
+    feedback: str
+    recommended_books: Optional[List[str]] = []
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
-
-class GoogleLoginRequest(BaseModel):
-    credential: str
 
 class UserResponse(BaseModel):
     id: int
@@ -75,8 +86,17 @@ class OnboardingUpdate(BaseModel):
 
 # --- STUDY PLANNER SCHEMAS ---
 
+class ExcludedTopicOut(BaseModel):
+    subject: str
+    topic: str
+    reason: str
+
 class StudyPlanCreateRequest(BaseModel):
+    exam_name: str = "JEE"
+    topics_already_done: Optional[List[str]] = []
+    exam_date: date
     daily_available_hours: float
+    days_per_week_available: int = 7
     weak_subjects: Optional[List[str]] = []
 
 class DailyTaskOut(BaseModel):
@@ -99,6 +119,7 @@ class StudyPlanOut(BaseModel):
     daily_available_hours: float
     status: str
     tasks: List[DailyTaskOut] = []
+    excluded_topics: Optional[List[ExcludedTopicOut]] = []
 
     class Config:
         from_attributes = True

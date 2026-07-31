@@ -1,4 +1,10 @@
 # backend/main.py
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -9,8 +15,7 @@ from schemas import (
     UserCreate, UserLogin, UserResponse,
     OnboardingCreate, OnboardingResponse, OnboardingUpdate,
     StudyPlanCreateRequest, StudyPlanOut, DailyTaskOut,
-    TaskUpdateRequest, RegeneratePlanRequest, SubjectProgressOut,
-    GoogleLoginRequest
+    TaskUpdateRequest, RegeneratePlanRequest, SubjectProgressOut
 )
 from crud import (
     get_user_by_email, create_user, get_user_by_id,
@@ -46,17 +51,17 @@ app = FastAPI(title="AceTrack API", version="1.0.0")
 # --- Pydantic Models for Mock Test Generator ---
 class QuestionGenerationRequest(BaseModel):
     question_plan: Dict[str, int]
-    testing_mode: bool = False
     exam_name: str
     output_format: str = 'pdf'
     questions_per_chunk: int
     syllabus_id: int 
-    subjects: Optional[List[str]] = None
+    topics: Optional[List[str]] = None
 
 class QuestionGenerationResponse(BaseModel):
     success: bool
     message: str
     files: Optional[Dict[str, str]] = None
+    questions: Optional[List[dict]] = None
 
 class QuestionType(BaseModel):
     name: str
@@ -100,6 +105,26 @@ async def get_syllabus_subjects():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading syllabus file: {str(e)}")
 
+@api_router.get("/syllabus-all-topics", response_model=List[str])
+async def get_syllabus_all_topics():
+    from utils.syllabus_parser import get_all_topics
+    try:
+        return get_all_topics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading syllabus file: {str(e)}")
+
+@api_router.get("/syllabus-topics-by-subject", response_model=Dict[str, List[str]])
+async def get_syllabus_topics_by_subject():
+    from utils.syllabus_parser import parse_syllabus_weightage
+    try:
+        parsed = parse_syllabus_weightage()
+        result = {}
+        for subject, topics in parsed.items():
+            result[subject] = [t["topic"] for t in topics]
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading syllabus file: {str(e)}")
+
 @api_router.get("/question-types", response_model=List[QuestionType])
 async def get_question_types():
     descriptions = {
@@ -137,18 +162,17 @@ async def generate_questions(
         parsed_syllabus = parse_syllabus_weightage()
         
         final_topics = {}
-        if request.subjects and parsed_syllabus:
-            for subj in request.subjects:
-                if subj in parsed_syllabus:
-                    final_topics[subj] = [t["topic"] for t in parsed_syllabus[subj]]
+        if request.topics:
+            # Group the requested topics by subject if possible, or just put them under "Selected"
+            # We'll just put them under a single key to make it simple, Generation.py will shuffle them.
+            final_topics = {"Selected": request.topics}
         
-        # Fallback to DB syllabus topics if no subjects selected or Excel failed
+        # Fallback to DB syllabus topics if no topics selected
         if not final_topics:
             final_topics = {"General": syllabus.topics}
 
         result = run_generation_task(
             plan=request.question_plan,
-            testing_mode=request.testing_mode,
             exam_name=request.exam_name,
             output_format=request.output_format,
             questions_per_chunk=request.questions_per_chunk,
@@ -162,6 +186,103 @@ async def generate_questions(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+
+class TestFeedbackRequest(BaseModel):
+    score: int
+    total: int
+    exam_name: str
+    results: List[dict]
+
+class TestFeedbackResponse(BaseModel):
+    feedback: str
+    recommended_books: Optional[List[str]] = []
+
+@api_router.post("/test-feedback", response_model=TestFeedbackResponse)
+async def generate_test_feedback(
+    request: TestFeedbackRequest,
+    current_user: dict = Depends(get_current_user_from_token)
+):
+    try:
+        from openai import OpenAI
+        import os, json
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY")
+        client = OpenAI(api_key=api_key)
+        
+        # Check if user got all questions correct
+        all_correct = True
+        if request.score < request.total:
+            all_correct = False
+        else:
+            for q in request.results:
+                if q.get('user_answer') != q.get('correct_answer'):
+                    all_correct = False
+                    break
+
+        if all_correct:
+            system_prompt = "You are an expert AI tutor and academic mentor for competitive exams."
+            prompt = (
+                f"The student just completed a {request.exam_name} mock test and scored PERFECT {request.score} out of {request.total}!\n"
+                "Generate a short, warm, highly congratulatory and encouraging paragraph praising their perfect score and mastery.\n"
+                "CRITICAL: Do NOT recommend any books, study materials, or areas for improvement in this case."
+            )
+            response = client.chat.completions.create(
+                model=os.getenv("OPENAI_MODEL", "gpt-4-turbo"),
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=400
+            )
+            feedback_text = response.choices[0].message.content.strip()
+            return TestFeedbackResponse(feedback=feedback_text, recommended_books=[])
+
+        else:
+            system_prompt = (
+                "You are an expert AI tutor for competitive exams like JEE. "
+                "You must respond in strict JSON format matching:\n"
+                "{\n"
+                '  "feedback": "Encouraging feedback paragraph...",\n'
+                '  "recommended_books": ["Author - Book Title", "Author - Book Title"]\n'
+                "}"
+            )
+            prompt = f"The student took a {request.exam_name} mock test. Score: {request.score} out of {request.total}.\n\n"
+            prompt += "Questions and student answers:\n"
+            for i, q in enumerate(request.results):
+                prompt += f"Q{i+1}: {q.get('question')}\n"
+                prompt += f"User Answer: {q.get('user_answer')}, Correct Answer: {q.get('correct_answer')}\n"
+                prompt += f"Solution: {q.get('solution')}\n\n"
+
+            prompt += (
+                "Instructions:\n"
+                "1. Provide a short, encouraging, and highly specific paragraph of feedback ('feedback'). Praise what they answered correctly and point out the specific weak topics/concepts they got wrong.\n"
+                "2. Recommend 2-3 real, widely-known, standard reference books ('recommended_books') commonly used by JEE / competitive exam students for the identified weak topics.\n"
+                "   - Rely on your own knowledge of genuinely famous standard reference books for JEE (e.g. 'H.C. Verma - Concepts of Physics', 'O.P. Tandon - Physical Chemistry', 'R.D. Sharma - Mathematics for JEE').\n"
+                "   - Do NOT recommend obscure, regional, or invented titles.\n"
+                "   - Format each entry strictly as 'Author - Book Title' or 'Book Title by Author' (e.g. 'H.C. Verma - Concepts of Physics').\n"
+                "   - Do NOT include chapter numbers, page numbers, links, URLs, or other resource types.\n"
+                "3. Output strictly valid JSON."
+            )
+
+            response = client.chat.completions.create(
+                model=os.getenv("OPENAI_MODEL", "gpt-4-turbo"),
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7,
+                max_tokens=600
+            )
+
+            res_data = json.loads(response.choices[0].message.content)
+            feedback_text = res_data.get("feedback", "")
+            books = res_data.get("recommended_books", [])
+
+            return TestFeedbackResponse(feedback=feedback_text, recommended_books=books)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/wakeup")
 async def wakeup():
@@ -249,49 +370,10 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     return {
         "access_token": access_token, 
         "token_type": "bearer", 
-        "user": UserResponse(id=db_user.id, email=db_user.email, has_completed_onboarding=db_user.has_completed_onboarding)
-    }
-
-@api_router.post("/auth/google")
-def google_login(payload: GoogleLoginRequest, db: Session = Depends(get_db)):
-    from google.oauth2 import id_token
-    from google.auth.transport import requests as google_requests
-    import os
-    import secrets
-    from auth import hash_password, create_access_token
-    
-    CLIENT_ID = os.getenv("VITE_GOOGLE_CLIENT_ID")
-    if not CLIENT_ID:
-        raise HTTPException(status_code=500, detail="Google Client ID is not configured on the server.")
-        
-    try:
-        # Verify the token
-        idinfo = id_token.verify_oauth2_token(
-            payload.credential, 
-            google_requests.Request(), 
-            CLIENT_ID
-        )
-        
-        email = idinfo.get('email')
-        if not email:
-            raise HTTPException(status_code=400, detail="Google token did not contain an email address.")
-            
-        # Check if user exists
-        db_user = get_user_by_email(db, email)
-        if not db_user:
-            # Create a new user with a random hashed password since they use Google
-            random_pwd = secrets.token_urlsafe(32)
-            user_create = UserCreate(email=email, password=random_pwd)
-            db_user = create_user(db, user_create)
-            
-        access_token = create_access_token(data={"sub": db_user.email, "user_id": db_user.id})
-        return {
-            "access_token": access_token, 
-            "token_type": "bearer", 
-            "user": UserResponse(id=db_user.id, email=db_user.email, has_completed_onboarding=db_user.has_completed_onboarding)
+        "user": {
+            "id": db_user.id, "email": db_user.email, "has_completed_onboarding": db_user.has_completed_onboarding
         }
-    except ValueError as e:
-        raise HTTPException(status_code=401, detail=f"Invalid Google token: {str(e)}")
+    }
 
 @api_router.get("/me", response_model=UserResponse)
 def get_current_user(current_user: dict = Depends(get_current_user_from_token), db: Session = Depends(get_db)):
@@ -338,14 +420,16 @@ def check_onboarding_status(current_user: dict = Depends(get_current_user_from_t
 # === STUDY PLANNER API ENDPOINTS ===
 # ===============================================================
 
-def _plan_to_out(plan) -> StudyPlanOut:
+def _plan_to_out(plan, excluded_topics=None) -> StudyPlanOut:
     """Helper to serialize StudyPlan ORM object to StudyPlanOut schema."""
+    final_excluded = excluded_topics if excluded_topics is not None else (getattr(plan, 'excluded_topics', []) or [])
     return StudyPlanOut(
         id=plan.id,
         exam_name=plan.exam_name,
         target_exam_date=plan.target_exam_date,
         daily_available_hours=plan.daily_available_hours,
         status=plan.status,
+        excluded_topics=final_excluded,
         tasks=[
             DailyTaskOut(
                 id=t.id,
@@ -379,24 +463,14 @@ def generate_study_plan(
             detail="An active study plan already exists. Use /study-plan/regenerate to update it."
         )
 
-    # Fetch onboarding for exam date + exam name
-    onboarding = get_onboarding_data_by_user_id(db, user_id)
-    if not onboarding:
-        raise HTTPException(status_code=422, detail="Complete onboarding first to set your exam date.")
-
     from datetime import date as today_type
     today = today_type.today()
-    days_remaining = (onboarding.exam_date - today).days
+    days_remaining = (request.exam_date - today).days
 
     if days_remaining <= 0:
-        raise HTTPException(status_code=422, detail="Exam date has already passed. Please update your exam date in onboarding.")
+        raise HTTPException(status_code=422, detail="Exam date must be in the future.")
 
-    # Fetch syllabuses and flatten into topic dicts
-    syllabuses = get_syllabuses_by_user_id(db, user_id)
-    if not syllabuses:
-        raise HTTPException(status_code=422, detail="Upload at least one syllabus file before generating a study plan.")
-
-    # Build flat topic list from all syllabuses (each topic string = subject+topic)
+    # Fetch parsed syllabus with weightages
     from utils.syllabus_parser import parse_syllabus_weightage
     parsed_syllabus = parse_syllabus_weightage()
     
@@ -410,35 +484,40 @@ def generate_study_plan(
                     "weightage": float(t.get("weightage", 1.0))
                 })
     else:
-        for syl in syllabuses:
-            for i, topic_str in enumerate(syl.topics):
-                parts = topic_str.split(":", 1)
-                subject = parts[0].strip() if len(parts) == 2 else syl.name
-                topic = parts[1].strip() if len(parts) == 2 else topic_str.strip()
-                topic_list.append({"subject": subject, "topic": topic, "weightage": 1.0})
+        syllabuses = get_syllabuses_by_user_id(db, user_id)
+        if syllabuses:
+            for syl in syllabuses:
+                for i, topic_str in enumerate(syl.topics):
+                    parts = topic_str.split(":", 1)
+                    subject = parts[0].strip() if len(parts) == 2 else syl.name
+                    topic = parts[1].strip() if len(parts) == 2 else topic_str.strip()
+                    topic_list.append({"subject": subject, "topic": topic, "weightage": 1.0})
 
     if not topic_list:
-        raise HTTPException(status_code=422, detail="No topics found in your syllabus files.")
+        raise HTTPException(status_code=422, detail="No syllabus topics available for planning.")
 
-    # Compute hour budget
+    # Compute hour budget & feasibility check
     try:
         budget_result = compute_hour_budget(
             syllabus_topics=topic_list,
+            topics_already_done=request.topics_already_done or [],
             weak_subjects=request.weak_subjects or [],
             daily_hours=request.daily_available_hours,
             days_remaining=days_remaining,
+            days_per_week=request.days_per_week_available or 7
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
     hour_budget = budget_result["budget"]
+    excluded_topics = budget_result.get("excluded_topics", [])
 
     # Call LLM for sequencing
     try:
         raw_days = _generate_schedule_from_llm(
             hour_budget=hour_budget,
             start_date=today,
-            target_exam_date=onboarding.exam_date,
+            target_exam_date=request.exam_date,
             days_remaining=days_remaining,
             daily_available_hours=request.daily_available_hours,
         )
@@ -452,9 +531,10 @@ def generate_study_plan(
     plan = create_study_plan(
         db=db,
         user_id=user_id,
-        exam_name=onboarding.exam_name,
-        target_exam_date=onboarding.exam_date,
+        exam_name=request.exam_name or "JEE",
+        target_exam_date=request.exam_date,
         daily_available_hours=request.daily_available_hours,
+        excluded_topics=excluded_topics,
     )
 
     # Flatten tasks for bulk insert
@@ -477,10 +557,9 @@ def generate_study_plan(
 
     bulk_create_tasks(db, plan.id, flat_tasks)
 
-    # Subject progress is no longer initialized here; it's handled on task completion.
     # Reload plan with tasks
     plan = get_plan_by_id(db, plan.id, user_id)
-    return _plan_to_out(plan)
+    return _plan_to_out(plan, excluded_topics=excluded_topics)
 
 
 @api_router.get("/study-plan/active", response_model=StudyPlanOut)
