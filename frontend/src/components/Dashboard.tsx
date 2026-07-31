@@ -459,12 +459,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   // --- UI HELPER DATA & FUNCTIONS ---
   // ... (getDaysUntilExam, getUserDisplayName remain unchanged) ...
   const getDaysUntilExam = () => {
-    if (!onboardingData?.examDate) return null;
-    const diffTime = new Date(onboardingData.examDate).getTime() - new Date().getTime();
+    // Prefer the active study plan's exam date; fall back to onboarding exam date
+    const examDateStr = activePlan?.target_exam_date || onboardingData?.examDate;
+    if (!examDateStr) return null;
+    const diffTime = new Date(examDateStr + 'T00:00:00').getTime() - new Date().setHours(0,0,0,0);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 ? diffDays : 0;
   };
   const daysUntilExam = getDaysUntilExam();
+  // Derive exam display name from active plan or fallback to onboarding
+  const examDisplayName = activePlan?.exam_name || onboardingData?.examName;
   const getUserDisplayName = () => user?.email?.split('@')[0] || 'User';
 
   // --- MOCK DATA & CALENDAR LOGIC ---
@@ -649,11 +653,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
 
             {/* Exam Info */}
-            {currentView === 'dashboard' && onboardingData?.examName && daysUntilExam !== null && (
+            {currentView === 'dashboard' && examDisplayName && daysUntilExam !== null && (
               <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-cyan-50 to-purple-50 rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-cyan-600" />
-                  <span className="font-semibold text-gray-800">{onboardingData.examName}</span>
+                  <span className="font-semibold text-gray-800">{examDisplayName}</span>
                 </div>
                 <div className="w-px h-6 bg-gray-300"></div>
                 <div className="flex items-center gap-2">
@@ -712,13 +716,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         </div>
 
         {/* Mobile Exam Info */}
-        {currentView === 'dashboard' && onboardingData?.examName && daysUntilExam !== null && (
+        {currentView === 'dashboard' && examDisplayName && daysUntilExam !== null && (
           <div className="md:hidden px-4 pb-3">
             {/* ... (this section is unchanged) ... */}
             <div className="flex items-center justify-center gap-3 px-4 py-2 bg-gradient-to-r from-cyan-50 to-purple-50 rounded-lg border border-gray-200">
               <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-cyan-600" />
-                <span className="font-semibold text-gray-800 text-sm">{onboardingData.examName}</span>
+                <span className="font-semibold text-gray-800 text-sm">{examDisplayName}</span>
               </div>
               <div className="w-px h-4 bg-gray-300"></div>
               <div className="flex items-center gap-2">
@@ -1190,20 +1194,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 </div>
               </div>
 
-              {daysUntilExam !== null && (
-                <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Clock className="w-6 h-6 text-red-500" />
-                    <h3 className="text-lg font-bold text-gray-800">Countdown</h3>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-pink-300">
-                      {daysUntilExam}
-                    </div>
-                    <p className="text-sm text-gray-600">days until {onboardingData?.examName || 'your exam'}</p>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         )}

@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+venv
+venv/*
 
 # Editor directories and files
 .vscode/*
@@ -26,3 +28,14 @@ dist-ssr
 
 .vscode/tasks.json
 .backend.vscode/tasks.json
+
+.venv
+__pycache__
+.ipynb_checkpoints
+*.zip
+*.rar
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.log

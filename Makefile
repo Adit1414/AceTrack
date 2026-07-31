@@ -3,11 +3,12 @@
 .PHONY: all backend frontend dev
 
 backend:
-	cd backend && code .
+	cd backend && .\venv\Scripts\activate.bat && uvicorn main:app --reload --port 10000
+
 
 
 frontend:
-	cd frontend && code .
+	cd frontend && npm run dev
 
 dev:
 	cmd /c start cmd /k "make backend"

@@ -367,6 +367,8 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) =
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
+  // Allows user to go back to the generate form even when a plan already exists
+  const [showForm, setShowForm] = useState(false);
 
   // Calendar navigation
   const [viewMonth, setViewMonth] = useState(new Date());
@@ -429,6 +431,7 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) =
       onPlanUpdated?.(data);
       fetchProgress();
       setActiveTab('today');
+    setShowForm(false);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -525,12 +528,23 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) =
     );
   }
 
-  if (!plan) {
+  if (!plan || showForm) {
     return (
       <>
         {error && (
           <div className="mx-4 mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex gap-2">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /> {error}
+          </div>
+        )}
+        {plan && showForm && (
+          <div className="mx-4 mb-4 flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+            <span className="text-sm text-indigo-800 font-medium">Generating a new plan will archive your current plan.</span>
+            <button
+              onClick={() => setShowForm(false)}
+              className="text-sm text-indigo-600 hover:text-indigo-800 font-semibold underline"
+            >
+              Cancel
+            </button>
           </div>
         )}
         <GenerateForm onGenerate={handleGenerate} loading={generating} token={token} />
@@ -552,6 +566,15 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) =
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowForm(true)}
+            disabled={regenerating}
+            title="Edit plan settings & generate a new plan"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors disabled:opacity-50 font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            New Plan
+          </button>
           <button
             onClick={() => handleRegenerate(false)}
             disabled={regenerating}

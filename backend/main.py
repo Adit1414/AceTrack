@@ -455,13 +455,10 @@ def generate_study_plan(
     """Generates a new AI study plan. Returns 409 if an active plan already exists."""
     user_id = current_user["user_id"]
 
-    # 409: Active plan already exists
+    # Archive existing plan if any (as per frontend UI warning)
     existing = get_active_plan(db, user_id)
     if existing:
-        raise HTTPException(
-            status_code=409,
-            detail="An active study plan already exists. Use /study-plan/regenerate to update it."
-        )
+        archive_active_plan(db, user_id)
 
     from datetime import date as today_type
     today = today_type.today()
@@ -689,7 +686,14 @@ def regenerate_study_plan(
                     topic = parts[1].strip() if len(parts) == 2 else topic_str.strip()
                     topic_list.append({"subject": subject, "topic": topic, "weightage": 1.0})
         try:
-            budget_result = compute_hour_budget(topic_list, [], plan.daily_available_hours, days_remaining)
+            budget_result = compute_hour_budget(
+                syllabus_topics=topic_list,
+                topics_already_done=onboarding.topics_covered or [],
+                weak_subjects=onboarding.weak_subjects or [],
+                daily_hours=plan.daily_available_hours,
+                days_remaining=days_remaining,
+                days_per_week=7
+            )
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
         try:

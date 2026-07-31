@@ -45,8 +45,8 @@ class Syllabus(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
     
-    # Store topics as an array of strings. This is much better than CSV.
-    topics = Column(ARRAY(String), nullable=False)
+    # Store topics as a JSON array of strings (compatible with PostgreSQL and SQLite)
+    topics = Column(JSON, nullable=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
