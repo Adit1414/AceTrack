@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Calendar, Plus, RefreshCw, CheckCircle2, Clock,
   AlertCircle, Loader2, ChevronLeft, ChevronRight,
@@ -527,6 +527,35 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) =
   const overallTotal = plan?.tasks.length ?? 0;
   const progressPct = overallTotal > 0 ? Math.round((overallDone / overallTotal) * 100) : 0;
 
+  // Completed tasks list (dynamically tracks ticked topics)
+  const completedTasks = useMemo(() => {
+    if (!plan) return [];
+    return plan.tasks.filter(t => t.status === 'done');
+  }, [plan]);
+
+  // Dynamically compute subject progress from plan.tasks so it reflects ticks/unticks instantly
+  const displayProgress: SubjectProgress[] = useMemo(() => {
+    if (!plan || !plan.tasks.length) return progress;
+    const bySubj: Record<string, { total: number; done: number }> = {};
+    for (const t of plan.tasks) {
+      const s = t.subject || 'General';
+      if (!bySubj[s]) bySubj[s] = { total: 0, done: 0 };
+      bySubj[s].total += 1;
+      if (t.status === 'done') bySubj[s].done += 1;
+    }
+    return Object.entries(bySubj).map(([subject, counts]) => {
+      const ratio = counts.total > 0 ? counts.done / counts.total : 0;
+      const mastery_level: MasteryLevel = ratio >= 0.7 ? 'strong' : ratio >= 0.3 ? 'moderate' : 'weak';
+      return {
+        subject,
+        weightage_score: Math.round(ratio * 100),
+        mastery_level,
+        tasks_completed: counts.done,
+        tasks_total: counts.total,
+      };
+    }).sort((a, b) => a.subject.localeCompare(b.subject));
+  }, [plan, progress]);
+
   const calDays = (() => {
     const year = viewMonth.getFullYear();
     const month = viewMonth.getMonth();
@@ -636,9 +665,8 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) =
                 </summary>
                 <div className="mt-2 space-y-1 max-h-36 overflow-y-auto pr-1">
                   {plan.excluded_topics.map((t, idx) => (
-                    <div key={idx} className="flex items-center justify-between px-2.5 py-1 bg-amber-100/60 rounded text-amber-900">
-                      <span className="font-medium">{t.subject}: {formatTopicTitle(t.topic)}</span>
-                      <span className="text-[10px] text-amber-700 font-normal">{t.reason}</span>
+                    <div key={idx} className="flex items-center px-2.5 py-1 bg-amber-100/60 rounded text-amber-900">
+                      <span className="font-medium text-xs">{t.subject}: {formatTopicTitle(t.topic)}</span>
                     </div>
                   ))}
                 </div>
@@ -819,40 +847,53 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) =
 
       {/* PROGRESS TAB */}
       {activeTab === 'progress' && (
-        <div className="space-y-3">
-          {progress.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No progress data yet. Start completing tasks!</p>
-          ) : (
-            progress.map(p => {
-              const pct = p.tasks_total > 0 ? Math.round((p.tasks_completed / p.tasks_total) * 100) : 0;
-              return (
-                <div key={p.subject} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${getSubjectColor(p.subject)}`}>
-                        {p.subject}
+        <div className="space-y-4">
+          {completedTasks.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+              <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-gray-700">No completed topics yet</p>
+              <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                Tick tasks in the <strong>Today</strong> or <strong>Calendar</strong> tab to track your completed topics here!
+              </p>
+            </div>
+          ) : (() => {
+            // Group by subject
+            const grouped: Record<string, string[]> = {};
+            for (const t of completedTasks) {
+              const subj = (t.subject || 'General').split('\n')[0].trim();
+              if (!grouped[subj]) grouped[subj] = [];
+              const title = formatTopicTitle(t.topic);
+              if (!grouped[subj].includes(title)) {
+                grouped[subj].push(title);
+              }
+            }
+            const subjects = Object.keys(grouped).sort();
+            return (
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-5 shadow-xs">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-base font-bold text-green-800 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    Completed Topics ({completedTasks.length})
+                  </h4>
+                  <span className="text-xs font-semibold px-2.5 py-1 bg-green-100/80 text-green-800 border border-green-300 rounded-full">
+                    {overallDone}/{overallTotal} tasks done ({progressPct}%)
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  {subjects.map(subj => (
+                    <div key={subj} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-green-100 text-sm shadow-xs">
+                      <span className={`font-semibold text-xs px-2 py-0.5 rounded-full shrink-0 border ${getSubjectColor(subj)}`}>
+                        {subj}
                       </span>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${masteryColor[p.mastery_level]}`}>
-                        {masteryIcon[p.mastery_level]} {p.mastery_level}
+                      <span className="text-gray-700 leading-relaxed text-xs sm:text-sm">
+                        {grouped[subj].join(', ')}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {p.tasks_completed}/{p.tasks_total} tasks · {pct}%
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-700 ${
-                        p.mastery_level === 'strong' ? 'bg-green-400' :
-                        p.mastery_level === 'moderate' ? 'bg-amber-400' : 'bg-red-400'
-                      }`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
+                  ))}
                 </div>
-              );
-            })
-          )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -878,21 +919,13 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) =
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {plan.excluded_topics.map((t, idx) => (
-                <div key={idx} className="bg-white rounded-xl border border-gray-200 p-3.5 shadow-xs flex flex-col justify-between space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${getSubjectColor(t.subject)}`}>
-                      {t.subject}
-                    </span>
-                    <span className="text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                      Excluded
-                    </span>
-                  </div>
+                <div key={idx} className="bg-white rounded-xl border border-gray-200 p-3.5 shadow-xs flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-gray-800">
                     {formatTopicTitle(t.topic)}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    {t.reason}
-                  </p>
+                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 border ${getSubjectColor(t.subject)}`}>
+                    {t.subject}
+                  </span>
                 </div>
               ))}
             </div>

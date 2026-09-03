@@ -8,8 +8,12 @@ from openai import OpenAI
 
 from services.studyPlanner.PromptsDict import STUDY_PLAN_SEQUENCING_PROMPT
 
-# OpenAI client
-_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+def _get_client():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set. Please set it in backend/.env.")
+    return OpenAI(api_key=api_key)
+
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 
 # ============================================================
@@ -179,7 +183,8 @@ def _call_openai_and_parse(prompt: str, strict: bool = False) -> List[Dict]:
         {"role": "user", "content": prompt},
     ]
 
-    response = _client.chat.completions.create(
+    client = _get_client()
+    response = client.chat.completions.create(
         model=MODEL,
         messages=messages,
         temperature=0.2,
@@ -202,6 +207,57 @@ def _call_openai_and_parse(prompt: str, strict: bool = False) -> List[Dict]:
         raise RuntimeError(f"Failed to parse LLM JSON output: {e}\nRaw output: {raw[:500]}")
 
 
+def _generate_schedule_algorithmic(
+    hour_budget: Dict[str, Dict[str, float]],
+    start_date: date,
+    days_remaining: int,
+    daily_available_hours: float,
+) -> List[Dict]:
+    """Algorithmic sequencer that interleaves subjects across days without requiring an external LLM."""
+    by_subj = {subj: list(topics.items()) for subj, topics in hour_budget.items()}
+    subjs = list(by_subj.keys())
+    indices = {s: 0 for s in subjs}
+
+    flat_tasks = []
+    while any(indices[s] < len(by_subj[s]) for s in subjs):
+        for s in subjs:
+            if indices[s] < len(by_subj[s]):
+                topic, hours = by_subj[s][indices[s]]
+                flat_tasks.append({"subject": s, "topic": topic, "hours": float(hours)})
+                indices[s] += 1
+
+    days = []
+    curr_date = start_date
+    curr_day_tasks = []
+    curr_day_hours = 0.0
+
+    for task in flat_tasks:
+        remaining_task_hours = task["hours"]
+        while remaining_task_hours > 0:
+            available_today = max(0.0, daily_available_hours - curr_day_hours)
+            if available_today <= 0.25:
+                if curr_day_tasks:
+                    days.append({"date": curr_date.isoformat(), "tasks": curr_day_tasks})
+                curr_date += timedelta(days=1)
+                curr_day_tasks = []
+                curr_day_hours = 0.0
+                available_today = daily_available_hours
+
+            chunk = min(remaining_task_hours, available_today)
+            curr_day_tasks.append({
+                "subject": task["subject"],
+                "topic": task["topic"],
+                "hours": round(chunk, 2)
+            })
+            curr_day_hours += chunk
+            remaining_task_hours -= chunk
+
+    if curr_day_tasks:
+        days.append({"date": curr_date.isoformat(), "tasks": curr_day_tasks})
+
+    return days
+
+
 def _generate_schedule_from_llm(
     hour_budget: Dict[str, Dict[str, float]],
     start_date: date,
@@ -209,19 +265,36 @@ def _generate_schedule_from_llm(
     days_remaining: int,
     daily_available_hours: float,
 ) -> List[Dict]:
-    """Calls LLM to sequence the schedule. Retries once on parse failure."""
+    """
+    Calls LLM to sequence the schedule.
+    If OPENAI_API_KEY is not configured or LLM call fails, falls back gracefully to algorithmic sequencing.
+    """
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("[INFO] OPENAI_API_KEY not configured. Generating study plan using smart algorithmic sequencer.")
+        return _generate_schedule_algorithmic(
+            hour_budget=hour_budget,
+            start_date=start_date,
+            days_remaining=days_remaining,
+            daily_available_hours=daily_available_hours
+        )
+
     prompt = build_llm_sequencing_prompt(
         hour_budget, start_date, target_exam_date, days_remaining, daily_available_hours
     )
     try:
         return _call_openai_and_parse(prompt, strict=False)
-    except RuntimeError:
-        # Retry once with stricter instruction
+    except Exception as e:
+        print(f"[WARNING] LLM attempt 1 failed ({e}). Retrying with strict output...")
         try:
             return _call_openai_and_parse(prompt, strict=True)
-        except RuntimeError as e:
-            raise RuntimeError(
-                f"Study plan generation failed after 2 attempts. Please try again. Details: {e}"
+        except Exception as retry_err:
+            print(f"[WARNING] LLM attempt 2 failed ({retry_err}). Falling back to algorithmic sequencer.")
+            return _generate_schedule_algorithmic(
+                hour_budget=hour_budget,
+                start_date=start_date,
+                days_remaining=days_remaining,
+                daily_available_hours=daily_available_hours
             )
 
 
