@@ -310,9 +310,28 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
               </label>
               <input
                 type="number"
-                min={1} max={16} step={0.5}
-                value={dailyHours}
-                onChange={e => setDailyHours(parseFloat(e.target.value) || 1)}
+                min={0.5}
+                max={18}
+                step={0.5}
+                value={dailyHours || ''}
+                onChange={e => {
+                  const rawVal = e.target.value;
+                  if (rawVal === '') {
+                    setDailyHours(0);
+                    return;
+                  }
+                  const val = parseFloat(rawVal);
+                  if (val > 18) {
+                    setDailyHours(18);
+                  } else {
+                    setDailyHours(val);
+                  }
+                }}
+                onBlur={() => {
+                  if (!dailyHours || dailyHours < 1) {
+                    setDailyHours(1);
+                  }
+                }}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 font-medium"
                 required
               />
@@ -330,7 +349,10 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
                 <option value={7}>7 Days / week (No rest day)</option>
                 <option value={6}>6 Days / week (1 rest day)</option>
                 <option value={5}>5 Days / week (2 rest days)</option>
-                <option value={4}>4 Days / week</option>
+                <option value={4}>4 Days / week (3 rest days)</option>
+                <option value={3}>3 Days / week (4 rest days)</option>
+                <option value={2}>2 Days / week (5 rest days)</option>
+                <option value={1}>1 Day / week (6 rest days)</option>
               </select>
             </div>
           </div>

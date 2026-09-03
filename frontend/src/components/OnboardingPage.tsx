@@ -292,11 +292,25 @@ const OnboardingPage: React.FC<OnboardingPageProps> = ({ onBack, onComplete }) =
                   type="number"
                   name="studyHours"
                   value={formData.studyHours}
-                  onChange={handleInputChange}
+                  onChange={e => {
+                    const rawVal = e.target.value;
+                    if (rawVal === '') {
+                      handleInputChange(e);
+                      return;
+                    }
+                    const val = parseFloat(rawVal);
+                    if (val > 18) {
+                      handleInputChange({
+                        target: { name: 'studyHours', value: '18' }
+                      } as any);
+                    } else {
+                      handleInputChange(e);
+                    }
+                  }}
                   required
                   min="1"
-                  max="16"
-                  placeholder="e.g., 4"
+                  max="18"
+                  placeholder="e.g., 4 (Max 18 hours)"
                   disabled={loading}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-magenta-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 />
