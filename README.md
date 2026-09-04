@@ -253,6 +253,7 @@ docker-compose up --build
 > AceTrack requires a syllabus to be uploaded before using the Mock Test Generator or Study Planner.
 
 ### 1. Sign Up / Log In
+Open the Link, might take some time (10-12 sec) to load - can be load faster with incognito. 
 Create an account or continue with Google Sign-In.
 
 ### 2. Upload a Syllabus
