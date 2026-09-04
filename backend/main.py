@@ -530,7 +530,13 @@ def generate_study_plan(
         raise HTTPException(status_code=422, detail="Exam date must be in the future.")
 
     topic_list = []
-    syllabuses = get_syllabuses_by_user_id(db, user_id)
+    syllabuses = []
+    if request.syllabus_id:
+        syl = get_syllabus_by_id(db, request.syllabus_id, user_id)
+        if syl:
+            syllabuses = [syl]
+    if not syllabuses:
+        syllabuses = get_syllabuses_by_user_id(db, user_id)
     if syllabuses:
         for syl in syllabuses:
             if isinstance(syl.topics, dict):

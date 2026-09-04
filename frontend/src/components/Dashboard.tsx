@@ -1157,6 +1157,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   <StudyPlanPage
                     token={localStorage.getItem('access_token') || ''}
                     onPlanUpdated={(newPlan) => setActivePlan(newPlan)}
+                    onNavigateToSyllabus={() => setCurrentView('syllabus')}
+                    syllabuses={syllabuses}
+                    isSyllabusesLoading={isSyllabusLoading}
                   />
                 </div>
               )}
