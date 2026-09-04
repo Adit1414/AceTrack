@@ -20,8 +20,41 @@ const SUBJECT_COLORS: Record<string, string> = {
   Biology: 'bg-emerald-100 text-emerald-800 border-emerald-200',
 };
 
-const getSubjectColor = (subject: string) =>
-  SUBJECT_COLORS[subject] ?? 'bg-gray-100 text-gray-800 border-gray-200';
+export interface Syllabus {
+  id: number;
+  name: string;
+  created_at: string;
+  topic_count: number;
+}
+
+const SUBJECT_PALETTES = [
+  { border: 'border-indigo-200', headerBg: 'bg-indigo-50', badgeBg: 'bg-indigo-100 text-indigo-800 border-indigo-200', text: 'text-indigo-900' },
+  { border: 'border-emerald-200', headerBg: 'bg-emerald-50', badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200', text: 'text-emerald-900' },
+  { border: 'border-amber-200', headerBg: 'bg-amber-50', badgeBg: 'bg-amber-100 text-amber-800 border-amber-200', text: 'text-amber-900' },
+  { border: 'border-purple-200', headerBg: 'bg-purple-50', badgeBg: 'bg-purple-100 text-purple-800 border-purple-200', text: 'text-purple-900' },
+  { border: 'border-rose-200', headerBg: 'bg-rose-50', badgeBg: 'bg-rose-100 text-rose-800 border-rose-200', text: 'text-rose-900' },
+  { border: 'border-cyan-200', headerBg: 'bg-cyan-50', badgeBg: 'bg-cyan-100 text-cyan-800 border-cyan-200', text: 'text-cyan-900' },
+];
+
+const KNOWN_THEMES: Record<string, typeof SUBJECT_PALETTES[0]> = {
+  Physics: SUBJECT_PALETTES[0],
+  Chemistry: SUBJECT_PALETTES[1],
+  Maths: SUBJECT_PALETTES[2],
+  Mathematics: SUBJECT_PALETTES[2],
+  Biology: SUBJECT_PALETTES[3],
+};
+
+const getSubjectTheme = (subj: string, index: number) => {
+  if (KNOWN_THEMES[subj]) return KNOWN_THEMES[subj];
+  return SUBJECT_PALETTES[index % SUBJECT_PALETTES.length];
+};
+
+const getSubjectColor = (subject: string) => {
+  if (SUBJECT_COLORS[subject]) return SUBJECT_COLORS[subject];
+  const hash = subject.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const palette = SUBJECT_PALETTES[Math.abs(hash) % SUBJECT_PALETTES.length];
+  return palette.badgeBg;
+};
 
 const masteryColor: Record<MasteryLevel, string> = {
   weak: 'text-red-600 bg-red-50 border-red-200',
@@ -137,11 +170,26 @@ interface GenerateFormProps {
   onGenerate: (req: StudyPlanCreateRequest) => void;
   loading: boolean;
   token: string;
+  syllabuses?: Syllabus[];
+  isSyllabusLoading?: boolean;
+  onNavigateToSyllabus?: () => void;
 }
 
-const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token }) => {
-  // Form States (In order of fields required)
-  const [examName, setExamName] = useState('JEE');
+const GenerateForm: React.FC<GenerateFormProps> = ({
+  onGenerate,
+  loading,
+  token,
+  syllabuses: propSyllabuses,
+  isSyllabusLoading: propIsSyllabusLoading,
+  onNavigateToSyllabus,
+}) => {
+  const [internalSyllabuses, setInternalSyllabuses] = useState<Syllabus[]>([]);
+  const [internalLoading, setInternalLoading] = useState<boolean>(true);
+  const [selectedSyllabusId, setSelectedSyllabusId] = useState<number | null>(null);
+
+  const syllabuses = propSyllabuses !== undefined ? propSyllabuses : internalSyllabuses;
+  const isSyllabusLoading = propIsSyllabusLoading !== undefined ? propIsSyllabusLoading : internalLoading;
+
   const [topicsBySubject, setTopicsBySubject] = useState<{ [key: string]: string[] }>({});
   const [topicsAlreadyDone, setTopicsAlreadyDone] = useState<string[]>([]);
   const [examDate, setExamDate] = useState(defaultExamDate());
@@ -149,28 +197,82 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
   const [daysPerWeek, setDaysPerWeek] = useState(6);
   const [weakSubjects, setWeakSubjects] = useState<string[]>([]);
 
-  // Fetch subject-wise topics for "Topics Already Done" selector
+  // Fetch syllabuses if not provided as props
   useEffect(() => {
+    if (propSyllabuses !== undefined) return;
+    let isMounted = true;
+    const fetchSyllabuses = async () => {
+      setInternalLoading(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/syllabus`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data: Syllabus[] = await response.json();
+          if (isMounted) {
+            setInternalSyllabuses(data);
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching syllabuses:', e);
+      } finally {
+        if (isMounted) setInternalLoading(false);
+      }
+    };
+    fetchSyllabuses();
+    return () => { isMounted = false; };
+  }, [token, propSyllabuses]);
+
+  // Keep selectedSyllabusId valid when syllabuses change
+  useEffect(() => {
+    if (syllabuses.length > 0) {
+      if (!selectedSyllabusId || !syllabuses.some(s => s.id === selectedSyllabusId)) {
+        setSelectedSyllabusId(syllabuses[0].id);
+      }
+    } else {
+      setSelectedSyllabusId(null);
+      setTopicsBySubject({});
+      setTopicsAlreadyDone([]);
+    }
+  }, [syllabuses, selectedSyllabusId]);
+
+  // Fetch topics for selected syllabus
+  useEffect(() => {
+    if (!selectedSyllabusId) {
+      setTopicsBySubject({});
+      setTopicsAlreadyDone([]);
+      return;
+    }
+    let isMounted = true;
     const fetchTopics = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/syllabus-topics-by-subject`, {
+        const response = await fetch(`${API_BASE_URL}/api/syllabus-topics/${selectedSyllabusId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
           const data = await response.json();
-          setTopicsBySubject(data);
+          if (isMounted) {
+            setTopicsBySubject(data);
+          }
+        } else {
+          if (isMounted) setTopicsBySubject({});
         }
       } catch (e) {
         console.error('Error fetching syllabus topics:', e);
+        if (isMounted) setTopicsBySubject({});
       }
     };
     fetchTopics();
-  }, [token]);
+    return () => { isMounted = false; };
+  }, [selectedSyllabusId, token]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedSyllabusId || syllabuses.length === 0) return;
+    const currentSyl = syllabuses.find(s => s.id === selectedSyllabusId);
     onGenerate({
-      exam_name: examName,
+      exam_name: currentSyl ? currentSyl.name : 'Study Plan',
+      syllabus_id: selectedSyllabusId,
       topics_already_done: topicsAlreadyDone,
       exam_date: examDate,
       daily_available_hours: dailyHours,
@@ -193,49 +295,73 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* FIELD 1: Exam Name Dropdown */}
+          {/* FIELD 1: Select Syllabus */}
           <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-              1. Exam Name
+            <label htmlFor="syllabus-select" className="block text-sm font-semibold text-gray-800 mb-1.5">
+              1. Select Syllabus
             </label>
-            <select
-              value={examName}
-              onChange={e => setExamName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-gray-800"
-            >
-              <option value="JEE">JEE</option>
-            </select>
+            {isSyllabusLoading ? (
+              <div className="w-full p-3 bg-gray-100 rounded-xl animate-pulse text-sm text-gray-500">
+                Loading syllabuses...
+              </div>
+            ) : syllabuses.length === 0 ? (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800">
+                <p className="font-semibold text-sm">No syllabus found.</p>
+                <p className="text-sm mt-0.5">
+                  Please go to{' '}
+                  <button
+                    type="button"
+                    onClick={onNavigateToSyllabus}
+                    className="font-bold underline hover:text-yellow-900"
+                  >
+                    Syllabus Settings
+                  </button>{' '}
+                  to upload one first.
+                </p>
+              </div>
+            ) : (
+              <select
+                id="syllabus-select"
+                value={selectedSyllabusId || ''}
+                onChange={(e) => {
+                  setSelectedSyllabusId(Number(e.target.value));
+                  setTopicsAlreadyDone([]);
+                }}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-gray-800 cursor-pointer"
+              >
+                <option value="" disabled>-- Select a syllabus --</option>
+                {syllabuses.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.topic_count} topics)
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          {/* FIELD 2: Topics Already Done (Subject-wise multi-select dropdowns & chips) */}
-          <div className="space-y-3 bg-gray-50/70 p-4 rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-semibold text-gray-800">
-                2. Topics Already Done <span className="text-xs font-normal text-gray-500">(Optional — excluded from your plan)</span>
-              </label>
-              {topicsAlreadyDone.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setTopicsAlreadyDone([])}
-                  className="text-xs text-red-600 hover:text-red-800 font-medium hover:underline"
-                >
-                  Clear Done Topics ({topicsAlreadyDone.length})
-                </button>
-              )}
-            </div>
+          {/* FIELD 2: Topics Already Done (Disappears entirely when no syllabus or topics) */}
+          {Object.keys(topicsBySubject).length > 0 && (
+            <div className="space-y-3 bg-gray-50/70 p-4 rounded-xl border border-gray-200">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-semibold text-gray-800">
+                  2. Topics Already Done <span className="text-xs font-normal text-gray-500">(Optional — excluded from your plan)</span>
+                </label>
+                {topicsAlreadyDone.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setTopicsAlreadyDone([])}
+                    className="text-xs text-red-600 hover:text-red-800 font-medium hover:underline"
+                  >
+                    Clear Done Topics ({topicsAlreadyDone.length})
+                  </button>
+                )}
+              </div>
 
-            {Object.keys(topicsBySubject).length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {Object.entries(topicsBySubject).map(([subj, topics]) => {
+              <div className={`grid grid-cols-1 ${Object.keys(topicsBySubject).length === 1 ? 'md:grid-cols-1' : Object.keys(topicsBySubject).length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-3`}>
+                {Object.entries(topicsBySubject).map(([subj, topics], idx) => {
                   const unselectedTopics = topics.filter(t => !topicsAlreadyDone.includes(t));
                   const selectedSubjDone = topics.filter(t => topicsAlreadyDone.includes(t));
-
-                  const themeStyles: { [key: string]: { border: string; headerBg: string; badgeBg: string; text: string } } = {
-                    Physics: { border: 'border-indigo-200', headerBg: 'bg-indigo-50', badgeBg: 'bg-indigo-100 text-indigo-800 border-indigo-200', text: 'text-indigo-900' },
-                    Chemistry: { border: 'border-emerald-200', headerBg: 'bg-emerald-50', badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200', text: 'text-emerald-900' },
-                    Maths: { border: 'border-amber-200', headerBg: 'bg-amber-50', badgeBg: 'bg-amber-100 text-amber-800 border-amber-200', text: 'text-amber-900' }
-                  };
-                  const style = themeStyles[subj] || { border: 'border-cyan-200', headerBg: 'bg-cyan-50', badgeBg: 'bg-cyan-100 text-cyan-800 border-cyan-200', text: 'text-cyan-900' };
+                  const style = getSubjectTheme(subj, idx);
 
                   return (
                     <div key={subj} className={`border ${style.border} rounded-xl p-3 bg-white shadow-xs flex flex-col justify-between space-y-2`}>
@@ -270,7 +396,8 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
                               <button
                                 type="button"
                                 onClick={() => setTopicsAlreadyDone(topicsAlreadyDone.filter(item => item !== t))}
-                                className="p-0.5 hover:bg-black/10 rounded-full"
+                                className="p-0.5 hover:bg-black/10 rounded-full transition-colors"
+                                title="Remove topic"
                               >
                                 <X className="w-3 h-3" />
                               </button>
@@ -282,15 +409,13 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
                   );
                 })}
               </div>
-            ) : (
-              <p className="text-xs text-gray-400">Loading syllabus topics...</p>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* FIELD 3: Exam Date */}
+          {/* Exam Date */}
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-              3. Exam Date
+              {Object.keys(topicsBySubject).length > 0 ? '3. Exam Date' : '2. Exam Date'}
             </label>
             <input
               type="date"
@@ -302,11 +427,11 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
             />
           </div>
 
-          {/* FIELD 4 & 5: Daily Study Hours & Days Per Week */}
+          {/* Daily Study Hours & Days Per Week */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                4. Daily Study Hours
+                {Object.keys(topicsBySubject).length > 0 ? '4. Daily Study Hours' : '3. Daily Study Hours'}
               </label>
               <input
                 type="number"
@@ -339,7 +464,7 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
 
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
-                5. Days Per Week Available
+                {Object.keys(topicsBySubject).length > 0 ? '5. Days Per Week Available' : '4. Days Per Week Available'}
               </label>
               <select
                 value={daysPerWeek}
@@ -359,11 +484,13 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || syllabuses.length === 0 || !selectedSyllabusId}
             className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-lg disabled:opacity-60 disabled:cursor-not-allowed hover:shadow-lg transition-all shadow-md mt-4"
           >
             {loading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Generating AI Schedule…</>
+            ) : syllabuses.length === 0 ? (
+              <>Upload a Syllabus to Generate Plan</>
             ) : (
               <><Plus className="w-5 h-5" /> Generate My Plan</>
             )}
@@ -379,9 +506,18 @@ const GenerateForm: React.FC<GenerateFormProps> = ({ onGenerate, loading, token 
 interface StudyPlanPageProps {
   token: string;
   onPlanUpdated?: (plan?: StudyPlan | null) => void;
+  onNavigateToSyllabus?: () => void;
+  syllabuses?: Syllabus[];
+  isSyllabusesLoading?: boolean;
 }
 
-const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) => {
+const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
+  token,
+  onPlanUpdated,
+  onNavigateToSyllabus,
+  syllabuses,
+  isSyllabusesLoading,
+}) => {
   const [plan, setPlan] = useState<StudyPlan | null>(null);
   const [progress, setProgress] = useState<SubjectProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -598,7 +734,14 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({ token, onPlanUpdated }) =
             </button>
           </div>
         )}
-        <GenerateForm onGenerate={handleGenerate} loading={generating} token={token} />
+        <GenerateForm
+          onGenerate={handleGenerate}
+          loading={generating}
+          token={token}
+          syllabuses={syllabuses}
+          isSyllabusLoading={isSyllabusesLoading}
+          onNavigateToSyllabus={onNavigateToSyllabus}
+        />
       </>
     );
   }

@@ -96,6 +96,7 @@ class ExcludedTopicOut(BaseModel):
 
 class StudyPlanCreateRequest(BaseModel):
     exam_name: str = "JEE"
+    syllabus_id: Optional[int] = None
     topics_already_done: Optional[List[str]] = []
     exam_date: date
     daily_available_hours: float

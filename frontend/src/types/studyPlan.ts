@@ -34,6 +34,7 @@ export interface StudyPlan {
 
 export interface StudyPlanCreateRequest {
   exam_name: string;
+  syllabus_id?: number;
   topics_already_done?: string[];
   exam_date: string; // ISO date string "YYYY-MM-DD"
   daily_available_hours: number;
