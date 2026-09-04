@@ -247,7 +247,37 @@ docker-compose up --build
 ```
 
 ---
+## 📖 How to Use AceTrack
 
+> [!IMPORTANT]
+> AceTrack requires a syllabus to be uploaded before using the Mock Test Generator or Study Planner.
+
+### 1. Sign Up / Log In
+Create an account or continue with Google Sign-In.
+
+### 2. Upload a Syllabus
+- Open the **Syllabus** section.
+- Enter a syllabus name.
+- Upload an Excel (`.xlsx`) syllabus file.
+- You can also use the sample file:
+  `backend/data/JEEsyllabusWeightage.xlsx`
+
+### 3. Generate a Study Plan
+- Open **Study Plan**.
+- Select your syllabus.
+- Mark topics already completed, if any.
+- Enter exam date, daily study hours, and available study days.
+- Click **Generate My Plan**.
+
+AceTrack will create a personalized day-by-day schedule based on the remaining syllabus and available time.
+
+### 4. Generate & Take Mock Tests
+- Open **Mock Tests**.
+- Select syllabus, subjects/topics, question types, and question count.
+- Generate an in-app test or export it as PDF/DOCX.
+- Attempt the test to receive score, correct answers, explanations, and personalized AI feedback.
+
+---
 ## 🚀 Deployment Architecture
 
 ```text
