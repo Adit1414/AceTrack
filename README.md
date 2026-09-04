@@ -14,9 +14,9 @@ The platform leverages **Large Language Models (LLMs)** to transform raw syllabu
 
 ---
 
-## 🌐 Live Deployment
+## 🌐 DEPLOYMENT LINK
 
-* **Frontend:** [https://ace-track.vercel.app/](https://ace-track.vercel.app/)
+[https://ace-track.vercel.app/](https://ace-track.vercel.app/)
 
 ---
 
