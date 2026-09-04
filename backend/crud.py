@@ -69,31 +69,50 @@ def delete_onboarding_data(db: Session, user_id: int):
     return False
 
 # Syllabus Funcs
-def parse_syllabus_file(file: IO) -> List[str]:
+def parse_syllabus_file(file: IO) -> dict:
     """
-    (Step 2: Validation)
-    Reads an Excel file in-memory and parses the first column into a list of topics.
+    Reads an Excel file in-memory and parses subjects and weightages.
     Raises ValueError if the file is invalid.
     """
     try:
-        # Read the file directly from the upload stream
         df = pd.read_excel(file)
         if df.empty or len(df.columns) == 0:
             raise ValueError("File is empty or has no columns.")
-        
-        # Get the first column, drop any empty rows, and convert to list of strings
-        topic_column = df.columns[0]
-        topics = df[topic_column].dropna().astype(str).tolist()
-        
-        if not topics:
-            raise ValueError("No topics found in the first column.")
             
-        return topics
+        result = {}
+        cols = df.columns
+        for i in range(0, len(cols), 2):
+            if i + 1 >= len(cols):
+                break
+                
+            subject_col = cols[i]
+            weight_col = cols[i+1]
+            subject_name = str(subject_col).strip()
+            
+            topics = []
+            for index, row in df.iterrows():
+                topic_name = row[subject_col]
+                weight = row[weight_col]
+                
+                if pd.isna(topic_name) or str(topic_name).strip() == "":
+                    continue
+                    
+                weight_val = float(weight) if not pd.isna(weight) else 0.01
+                topics.append({
+                    "topic": str(topic_name).strip(),
+                    "weightage": weight_val
+                })
+                
+            if topics:
+                result[subject_name] = topics
+                
+        if not result:
+            raise ValueError("No valid subjects/topics found. Ensure format is Subject, Weightage, Subject, Weightage...")
+        return result
     except Exception as e:
-        # Catch pandas errors, bad file types, etc.
         raise ValueError(f"Failed to parse Excel file: {e}")
 
-def create_user_syllabus(db: Session, user_id: int, name: str, topics: List[str]) -> Syllabus:
+def create_user_syllabus(db: Session, user_id: int, name: str, topics: dict) -> Syllabus:
     """
     (Step 3: Storing)
     Creates and saves a new syllabus for a user.

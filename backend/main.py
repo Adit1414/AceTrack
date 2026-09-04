@@ -318,7 +318,8 @@ async def get_user_syllabuses(
     syllabuses = get_syllabuses_by_user_id(db, current_user["user_id"])
     return [
         SyllabusResponse(
-            id=s.id, name=s.name, created_at=s.created_at.isoformat(), topic_count=len(s.topics)
+            id=s.id, name=s.name, created_at=s.created_at.isoformat(), 
+            topic_count=sum(len(v) for v in s.topics.values()) if isinstance(s.topics, dict) else len(s.topics)
         ) for s in syllabuses
     ]
 
@@ -334,8 +335,9 @@ async def upload_syllabus(
             raise HTTPException(status_code=400, detail="Only .xlsx and .xls files allowed.")
         topics = parse_syllabus_file(file.file)
         syllabus = create_user_syllabus(db, current_user["user_id"], name, topics)
+        topic_count = sum(len(v) for v in syllabus.topics.values()) if isinstance(syllabus.topics, dict) else len(syllabus.topics)
         return SyllabusResponse(
-            id=syllabus.id, name=syllabus.name, created_at=syllabus.created_at.isoformat(), topic_count=len(syllabus.topics)
+            id=syllabus.id, name=syllabus.name, created_at=syllabus.created_at.isoformat(), topic_count=topic_count
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
@@ -350,6 +352,25 @@ async def delete_syllabus(
     if not success:
         raise HTTPException(status_code=404, detail="Syllabus not found")
     return {"message": "Syllabus deleted successfully"}
+
+@api_router.get("/syllabus-topics/{syllabus_id}", response_model=Dict[str, List[str]])
+async def get_syllabus_topics(
+    syllabus_id: int,
+    current_user: dict = Depends(get_current_user_from_token),
+    db: Session = Depends(get_db)
+):
+    syllabus = get_syllabus_by_id(db, syllabus_id, current_user["user_id"])
+    if not syllabus:
+        raise HTTPException(status_code=404, detail="Syllabus not found")
+    
+    result = {}
+    if isinstance(syllabus.topics, dict):
+        for subject, t_list in syllabus.topics.items():
+            result[subject] = [t["topic"] for t in t_list]
+    else:
+        # Backwards compatibility for old format
+        result["General"] = [t for t in syllabus.topics]
+    return result
 
 # ===============================================================
 # === USER AUTH & ONBOARDING ENDPOINTS ===
@@ -508,31 +529,27 @@ def generate_study_plan(
     if days_remaining <= 0:
         raise HTTPException(status_code=422, detail="Exam date must be in the future.")
 
-    # Fetch parsed syllabus with weightages
-    from utils.syllabus_parser import parse_syllabus_weightage
-    parsed_syllabus = parse_syllabus_weightage()
-    
     topic_list = []
-    if parsed_syllabus:
-        for subj, topics in parsed_syllabus.items():
-            for t in topics:
-                topic_list.append({
-                    "subject": subj, 
-                    "topic": t["topic"], 
-                    "weightage": float(t.get("weightage", 1.0))
-                })
-    else:
-        syllabuses = get_syllabuses_by_user_id(db, user_id)
-        if syllabuses:
-            for syl in syllabuses:
-                for i, topic_str in enumerate(syl.topics):
+    syllabuses = get_syllabuses_by_user_id(db, user_id)
+    if syllabuses:
+        for syl in syllabuses:
+            if isinstance(syl.topics, dict):
+                for subj, topics in syl.topics.items():
+                    for t in topics:
+                        topic_list.append({
+                            "subject": subj,
+                            "topic": t["topic"],
+                            "weightage": float(t.get("weightage", 1.0))
+                        })
+            else:
+                for topic_str in syl.topics:
                     parts = topic_str.split(":", 1)
                     subject = parts[0].strip() if len(parts) == 2 else syl.name
                     topic = parts[1].strip() if len(parts) == 2 else topic_str.strip()
                     topic_list.append({"subject": subject, "topic": topic, "weightage": 1.0})
 
     if not topic_list:
-        raise HTTPException(status_code=422, detail="No syllabus topics available for planning.")
+        raise HTTPException(status_code=422, detail="No syllabus topics available for planning. Please upload a syllabus.")
 
     # Compute hour budget & feasibility check
     try:
@@ -706,26 +723,24 @@ def regenerate_study_plan(
         days_remaining = (onboarding.exam_date - today).days
         if days_remaining <= 0:
             raise HTTPException(status_code=422, detail="Exam date has already passed.")
-        syllabuses = get_syllabuses_by_user_id(db, user_id)
-        from utils.syllabus_parser import parse_syllabus_weightage
-        parsed_syllabus = parse_syllabus_weightage()
-        
         topic_list = []
-        if parsed_syllabus:
-            for subj, topics in parsed_syllabus.items():
-                for t in topics:
-                    topic_list.append({
-                        "subject": subj, 
-                        "topic": t["topic"], 
-                        "weightage": float(t.get("weightage", 1.0))
-                    })
-        else:
+        syllabuses = get_syllabuses_by_user_id(db, user_id)
+        if syllabuses:
             for syl in syllabuses:
-                for topic_str in syl.topics:
-                    parts = topic_str.split(":", 1)
-                    subject = parts[0].strip() if len(parts) == 2 else syl.name
-                    topic = parts[1].strip() if len(parts) == 2 else topic_str.strip()
-                    topic_list.append({"subject": subject, "topic": topic, "weightage": 1.0})
+                if isinstance(syl.topics, dict):
+                    for subj, topics in syl.topics.items():
+                        for t in topics:
+                            topic_list.append({
+                                "subject": subj,
+                                "topic": t["topic"],
+                                "weightage": float(t.get("weightage", 1.0))
+                            })
+                else:
+                    for topic_str in syl.topics:
+                        parts = topic_str.split(":", 1)
+                        subject = parts[0].strip() if len(parts) == 2 else syl.name
+                        topic = parts[1].strip() if len(parts) == 2 else topic_str.strip()
+                        topic_list.append({"subject": subject, "topic": topic, "weightage": 1.0})
         try:
             budget_result = compute_hour_budget(
                 syllabus_topics=topic_list,
