@@ -10,7 +10,7 @@ email-validator>=2.0.0
 
 # --- Database Drivers ---
 psycopg2-binary==2.9.11
-SQLAlchemy==2.0.23
+SQLAlchemy>=2.0.36
 pymongo[srv]==4.15.3
 # pymongo[srv]==3.12
 dnspython==2.7.0
