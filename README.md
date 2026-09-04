@@ -1,8 +1,12 @@
 # AceTrack 🚀
 
-**AI-Powered Study Planner & Mock Test Generator**
+### AI-Powered Mock Test Generator & Personalized Study Planner
 
-**AceTrack** is a full-stack, AI-powered educational productivity platform designed to help students prepare for competitive exams such as **UPSC, GATE, JEE (Mains/Advanced), NEET, and UGC NET**.
+**AceTrack** is an AI-powered learning platform designed to make exam preparation more personalized, structured, and consistent.
+
+It combines **syllabus-based mock test generation, AI-powered evaluation and feedback, personalized study planning, and progress tracking** in one platform.
+
+---
 
 The platform leverages **Large Language Models (LLMs)** to transform raw syllabus data into **structured mock tests** and **personalized study plans**, bridging the gap between static study material and active, exam-oriented practice.
 
@@ -18,214 +22,266 @@ The platform leverages **Large Language Models (LLMs)** to transform raw syllabu
 
 ## ✨ Key Features
 
-### 🔐 Authentication & User Management
+### 🧠 AI Mock Test Generator
 
-* Secure user registration and login using **Google OAuth** (One-click Google Sign-In) and **JWT-based authentication**
-* Persistent user sessions and protected routes
+- Generate tests directly from an uploaded syllabus
+- Select subjects and topics
+- Choose question types
+- Set the number of questions for each format
+- Supports multiple formats including:
+  - MCQ
+  - Match the Following
+  - Assertion & Reasoning
+  - Statement-based questions
+  - Case Studies
+  - Numerical Answer Type
+  - Chronological Ordering
+- Attempt tests directly in the application
 
-### 🎯 Personalized Onboarding & Study Plans
+### 📊 AI Evaluation & Personalized Feedback
 
-* Guided first-time onboarding (or on-demand plan generation) to capture:
-  * Target exam and tentative date
-  * Left-out topics to skip
-  * Daily available hours and days per week
-* Fully editable: Users can re-generate and adjust their study plan at any time
-* Dynamically personalizes the dashboard and header countdown timers based on the active study plan
+After completing a test, AceTrack provides:
 
-### 🧠 AI-Powered Mock Test Generator
+- Overall score
+- Student's selected answer
+- Correct answer
+- Explanation for each question
+- Strengths and weak areas
+- Personalized improvement feedback
+- Recommended learning resources
 
-The core feature of AceTrack.
+### 📅 Personalized Study Planner
 
-* **Multi-Format Questions:**
-  Supports 10+ formats including:
+Students provide:
 
-  * MCQs
-  * Match the Following
-  * Assertion–Reason
-  * Statement-Based
-* **Custom Length Control:**
-  Specify the exact number of questions per format
-* **Syllabus-Aware Generation:**
-  Questions are generated strictly from uploaded syllabus data
-* **Dynamic File Export:**
-  Mock tests are delivered as clean, printable **PDF files** or **DOCX files** as per the user's choice
-* **Persistent Storage:**
-  Generated tests are securely stored using **Cloudinary**
+- Target exam
+- Exam date
+- Daily available study hours
+- Days available per week
+- Topics already completed
+
+AceTrack then creates a **day-by-day study schedule** based on:
+
+- Remaining syllabus
+- Available preparation time
+- Topic priority and weightage
+
+The planner also supports **rebalancing and regeneration** when the student's schedule changes.
+
+### 🔥 Progress Tracking & Gamification
+
+- Mark daily study tasks as completed
+- Track study progress
+- Calendar-based schedule
+- Study streak system to encourage consistency
 
 ### 📘 Dynamic Syllabus Management
 
-* Upload syllabus files in `.xlsx` format
-* Automatic topic extraction and structuring
-* Eliminates hardcoded syllabus data
+- Upload syllabus using `.xlsx` files
+- Automatically extract subjects and topics
+- Mock tests and study plans adapt to the selected syllabus
+- No exam-specific syllabus needs to be hardcoded
 
-### 🗂️ Study Plan Caching & Cost Optimization
+### 📄 Test Export
 
-* Hybrid database strategy to cache AI outputs
-* Reduces repeated API calls and improves response time
-* Lays groundwork for future fine-tuning and analytics
+Generated mock tests can be exported as:
 
-### 🖥️ Modern, Responsive UI
+- PDF
+- DOCX
 
-* Tabbed dashboard for:
-
-  * Mock Test Generator
-  * Study Plan Calendar
-  * Syllabus
-* Live exam countdown in header
-* Sidebar widgets:
-
-  * Study streak tracking
-  * Exam countdown visualization
+Generated documents can be stored using cloud storage.
 
 ---
 
-## 🏗️ Technical Architecture
+## 🔄 Workflow
 
-AceTrack follows a **decoupled, containerized architecture** designed for scalability, maintainability, and cloud deployment.
+```text
+Upload / Select Syllabus
+        ↓
+Choose Topics + Question Types + Question Count
+        ↓
+Generate Mock Test
+        ↓
+Attempt Test
+        ↓
+AI Evaluation + Score + Explanations
+        ↓
+Personalized Feedback & Resources
+        ↓
+Generate Study Plan
+        ↓
+Track Daily Progress & Study Streak
+```
 
-### Tech Stack
+---
 
-| Layer              | Technology                            |
-| ------------------ | ------------------------------------- |
-| Frontend           | React, TypeScript, Vite, Tailwind CSS |
-| Backend            | Python, FastAPI                       |
-| Primary DB         | PostgreSQL (Aiven)                    |
-| Logging / AI Cache | MongoDB (Atlas)                       |
-| ORM                | SQLAlchemy                            |
-| AI Engine          | OpenAI API (GPT-4o)                   |
-| File Storage       | Cloudinary                            |
-| Infrastructure     | Docker & Docker Compose               |
-| Deployment         | Vercel (Frontend), Render (Backend)   |
+## 🏗️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React.js, TypeScript, Vite, Tailwind CSS |
+| Backend | FastAPI, Python |
+| Database | PostgreSQL |
+| AI Layer | OpenAI API / LLM |
+| Validation | Pydantic |
+| ORM | SQLAlchemy |
+| Document Generation | ReportLab, python-docx |
+| File Storage | Cloudinary |
+| Containerization | Docker |
+| Frontend Deployment | Vercel |
+| Backend Deployment | Render |
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-STUDYPLANNERAPP/
-├── backend/                # FastAPI backend
-│   ├── services/           # Core AI & business logic
-│   │   ├── Generation.py       # Mock test generation logic
-│   │   └── PromptsDict.py      # Centralized prompt management
-│   ├── auth.py             # JWT authentication
-│   ├── crud.py             # Database CRUD operations
-│   ├── database.py         # SQLAlchemy setup
-│   ├── main.py             # FastAPI entry point & routes
-│   ├── models.py           # Database models
-│   ├── schemas.py          # Pydantic schemas
-│   ├── Dockerfile          # Backend containerization
+AceTrack/
+│
+├── backend/
+│   ├── data/
+│   ├── services/
+│   │   ├── mocktest/
+│   │   └── studyPlanner/
+│   ├── utils/
+│   ├── auth.py
+│   ├── crud.py
+│   ├── database.py
+│   ├── main.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── Dockerfile
 │   └── requirements.txt
 │
-├── frontend/               # React frontend
+├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── LoginPage.tsx
-│   │   │   ├── SignupPage.tsx
-│   │   │   ├── OnboardingPage.tsx
-│   │   │   └── SyllabusPage.tsx
-│   │   ├── App.tsx                 # Main application component with routing
-│   │   └── main.tsx                # Application entry point
-│   ├── index.html              # Main HTML file for the React app
-│   ├── tailwind.config.js      # Configuration for Tailwind CSS
-│   ├── package.json            # Project metadata and npm dependencies
-│   ├── vite.config.ts          # Configuration for the Vite build tool
-│   └── vercel.json             # Deployment configuration
+│   │   ├── types/
+│   │   ├── App.tsx
+│   │   ├── config.ts
+│   │   └── main.tsx
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── vercel.json
 │
-├── docker-compose.yml      # Multi-container orchestration
-└── .env                    # Environment variables
+├── docker-compose.yml
+└── README.md
 ```
 
 ---
 
-## 🛠️ Installation & Local Setup (Docker-Based)
+## 🛠️ Local Setup
 
-### Prerequisites
-
-* Docker & Docker Compose
-* OpenAI API key
-* PostgreSQL & MongoDB connection URLs
-
-### Steps
-
-1. **Clone the repository**
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Adit1414/AceTrack.git
+git clone https://github.com/Pragyasingh001/AceTrack.git
 cd AceTrack
 ```
 
-2. **Configure Environment Variables**
+---
 
-Create a `.env` file in the root directory:
+### 2. Backend Setup
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+Create a `.env` file inside `backend/`:
 
 ```env
 DATABASE_URL=your_postgresql_url
-MONGO_URI=your_mongodb_url
 OPENAI_API_KEY=your_openai_api_key
+SECRET_KEY=your_secret_key
+MONGO_URI=your_mongodb_url
 CLOUDINARY_URL=your_cloudinary_url
 ```
 
-3. **Start the application**
+Run the backend:
+
+```bash
+uvicorn main:app --reload --port 10000
+```
+
+Backend will run at:
+
+```text
+http://localhost:10000
+```
+
+API documentation:
+
+```text
+http://localhost:10000/docs
+```
+
+---
+
+### 3. Frontend Setup
+
+Open another terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend will run at:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## 🐳 Docker Setup
+
+From the project root:
 
 ```bash
 docker-compose up --build
 ```
 
-4. **Access**
+---
 
-* Frontend: [http://localhost:5173](http://localhost:5173)
-* Backend: [http://localhost:10000](http://localhost:10000)
+## 🚀 Deployment Architecture
+
+```text
+React + TypeScript Frontend
+          ↓
+        Vercel
+          ↓
+     FastAPI REST API
+          ↓
+    Docker on Render
+          ↓
+      PostgreSQL
+```
+
+AI-powered question generation, evaluation, feedback, and recommendations are handled through the LLM layer.
 
 ---
 
-## 🚀 Deployment
+## 🔮 Future Scope
 
-AceTrack is production-ready and deployed using modern cloud platforms:
-
-* **Frontend:** Vercel (automatic GitHub deployments)
-* **Backend:** Render (Dockerized web service)
-* **Databases:**
-
-  * PostgreSQL on Aiven
-  * MongoDB on Atlas
-* **Uptime Management:**
-  Cron-based health checks to prevent free-tier spin-down
+- **Open-Source Model Fine-Tuning:** Fine-tune models such as Llama or DeepSeek for subject-specific question generation and evaluation
+- **RAG-Based Evaluation:** Ground explanations and feedback using trusted books and Previous Year Questions
+- **Adaptive Test Engine:** Dynamically adjust question difficulty based on student performance
+- **Predictive Analytics:** Estimate topic mastery, preparation readiness, and weak areas
+- **Advanced Performance Dashboard:** Track accuracy and topic-wise improvement over time
 
 ---
 
-## 🧭 Future Roadmap
+## 🎯 Vision
 
-Planned enhancements:
-
-* **Dynamic AI Study Planner**
-
-  * Adaptive daily schedules based on:
-
-    * Available study hours
-    * Weak subjects
-    * Syllabus weightage
-* **Chapter-Wise & Weightage-Based Tests**
-* **Advanced Question Controls**
-
-  * Cognitive level (factual, analytical, application-based)
-* **In-App Test Taking Platform**
-
-  * Timer-based exam simulation
-  * Auto-evaluation & scoring
-* **Performance Analytics Dashboard**
-* **Resource Hub**
-
-  * PYQs
-  * Syllabus weightage trends
-* **Monetization Layer**
-
-  * Premium plans for advanced features
+> **AceTrack aims to bring practice, evaluation, planning, and consistency into one personalized exam-preparation platform.**
 
 ---
 
 ## 📝 License
 
-Distributed under the **MIT License**.
-
-
+This project is distributed under the MIT License.
