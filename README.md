@@ -6,14 +6,13 @@
 
 The platform leverages **Large Language Models (LLMs)** to transform raw syllabus data into **structured mock tests** and **personalized study plans**, bridging the gap between static study material and active, exam-oriented practice.
 
-![DashboardImage](assets/image.png)
+![DashboardImage](assets/interface.png)
 
 ---
 
 ## 🌐 Live Deployment
 
 * **Frontend:** [https://ace-track.vercel.app/](https://ace-track.vercel.app/)
-* **Backend API:** [https://acetrack-backend.onrender.com/](https://acetrack-backend.onrender.com/)
 
 ---
 
