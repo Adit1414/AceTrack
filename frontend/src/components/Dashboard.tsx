@@ -147,7 +147,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     loadQuestionTypes();
     loadOnboardingData();
     fetchSyllabuses(); // <-- Load syllabuses on init
-    fetchSyllabusTopics();
     fetchActivePlan();
   }, []);
 
@@ -178,10 +177,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     return firstLine;
   };
 
-  const fetchSyllabusTopics = async () => {
+  const fetchSyllabusTopics = async (syllabusId: number) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${API_BASE_URL}/api/syllabus-topics-by-subject`, {
+      const response = await fetch(`${API_BASE_URL}/api/syllabus-topics/${syllabusId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -189,11 +188,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         setTopicsBySubject(data);
         const flatList = Object.values(data).flat() as string[];
         setAvailableTopics(flatList);
+      } else {
+        setTopicsBySubject({});
+        setAvailableTopics([]);
       }
     } catch (error) {
       console.error('Error fetching syllabus topics by subject:', error);
+      setTopicsBySubject({});
+      setAvailableTopics([]);
     }
   };
+
+  useEffect(() => {
+    if (selectedSyllabusId) {
+      fetchSyllabusTopics(selectedSyllabusId);
+    } else {
+      setTopicsBySubject({});
+      setAvailableTopics([]);
+      setSelectedTopics([]);
+    }
+  }, [selectedSyllabusId]);
 
   // --- API CALLS ---
   const fetchSyllabuses = async () => {

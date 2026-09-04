@@ -21,16 +21,17 @@ The platform leverages **Large Language Models (LLMs)** to transform raw syllabu
 
 ### 🔐 Authentication & User Management
 
-* Secure user registration and login using **JWT-based authentication**
+* Secure user registration and login using **Google OAuth** (One-click Google Sign-In) and **JWT-based authentication**
 * Persistent user sessions and protected routes
 
-### 🎯 Personalized Onboarding
+### 🎯 Personalized Onboarding & Study Plans
 
-* Guided first-time onboarding to capture:
-
-  * Target exam
-  * Tentative exam date
-* Dynamically personalizes the dashboard and countdown timers
+* Guided first-time onboarding (or on-demand plan generation) to capture:
+  * Target exam and tentative date
+  * Left-out topics to skip
+  * Daily available hours and days per week
+* Fully editable: Users can re-generate and adjust their study plan at any time
+* Dynamically personalizes the dashboard and header countdown timers based on the active study plan
 
 ### 🧠 AI-Powered Mock Test Generator
 
