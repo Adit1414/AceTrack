@@ -11,8 +11,10 @@ else:
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Option 1: Use environment variable (recommended for production)
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+# Option 1: Use environment variable (recommended for production), fallback to local SQLite
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./sql_app.db"
 
 # Fix postgres:// legacy schema from Aiven/Heroku/Render for SQLAlchemy 1.4+
 if DATABASE_URL.startswith("postgres://"):

@@ -260,26 +260,27 @@ def get_subject_progress(db: Session, user_id: int) -> List[Dict]:
     total_map = {row.subject: row.total for row in total_q}
     done_map = {row.subject: row.done for row in done_q}
 
-    progress_records = (
-        db.query(SubjectProgress)
-        .filter(SubjectProgress.user_id == user_id)
-        .all()
-    )
-
     result = []
-    result = []
-    for sp in progress_records:
-        subj = sp.subject
+    for subj, total in total_map.items():
         clean_subj = subj if subj else "General"
+        done = done_map.get(subj, 0)
+        ratio = (done / total) if total > 0 else 0.0
+        if ratio >= 0.7:
+            mastery = "strong"
+        elif ratio >= 0.3:
+            mastery = "moderate"
+        else:
+            mastery = "weak"
+
         result.append({
             "subject": clean_subj,
-            "weightage_score": float(sp.weightage_score) if sp.weightage_score is not None else 1.0,
-            "mastery_level": sp.mastery_level if sp.mastery_level is not None else "mastered",
-            "tasks_completed": int(done_map.get(subj, 1)),
-            "tasks_total": int(total_map.get(subj, 1)),
+            "weightage_score": round(ratio * 100, 1),
+            "mastery_level": mastery,
+            "tasks_completed": int(done),
+            "tasks_total": int(total),
         })
 
-    return result
+    return sorted(result, key=lambda x: x["subject"])
 
 def delete_subject_progress(db: Session, user_id: int, subject: str):
     db.query(SubjectProgress).filter(
