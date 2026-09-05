@@ -546,12 +546,16 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
         onPlanUpdated?.(null);
         return;
       }
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        setPlan(null);
+        return;
+      }
       const data: StudyPlan = await res.json();
       setPlan(data);
       onPlanUpdated?.(data);
     } catch (e: any) {
-      setError(e.message ?? 'Failed to load plan');
+      // Normal when user hasn't generated a plan yet or offline probe; keep form clean
+      setPlan(null);
     } finally {
       setLoading(false);
     }
@@ -581,17 +585,24 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
         body: JSON.stringify(req),
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail ?? 'Generation failed');
+        let errMsg = 'Study plan generation failed';
+        try {
+          const err = await res.json();
+          errMsg = err.detail || errMsg;
+        } catch {
+          const text = await res.text();
+          if (text) errMsg = text;
+        }
+        throw new Error(errMsg);
       }
       const data: StudyPlan = await res.json();
       setPlan(data);
       onPlanUpdated?.(data);
       fetchProgress();
       setActiveTab('today');
-    setShowForm(false);
+      setShowForm(false);
     } catch (e: any) {
-      setError(e.message);
+      setError(e.message || 'Failed to generate study plan. Please verify backend connection.');
     } finally {
       setGenerating(false);
     }
@@ -640,8 +651,15 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
         body: JSON.stringify({ force_full: forceFullRegen }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail ?? 'Regeneration failed');
+        let errMsg = 'Regeneration failed';
+        try {
+          const err = await res.json();
+          errMsg = err.detail || errMsg;
+        } catch {
+          const text = await res.text();
+          if (text) errMsg = text;
+        }
+        throw new Error(errMsg);
       }
       const data: StudyPlan = await res.json();
       setPlan(data);
