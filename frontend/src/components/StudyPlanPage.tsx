@@ -669,6 +669,12 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
     return plan.tasks.filter(t => t.status === 'done');
   }, [plan]);
 
+  // Left-out / Missed tasks (scheduled in plan for past dates, but still pending)
+  const missedTasks = useMemo(() => {
+    if (!plan) return [];
+    return plan.tasks.filter(t => t.date < todayStr && t.status === 'pending');
+  }, [plan, todayStr]);
+
 
   const calDays = (() => {
     const year = viewMonth.getFullYear();
@@ -750,7 +756,7 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
           <button
             onClick={() => handleRegenerate(false)}
             disabled={regenerating}
-            title="Redistribute overdue tasks"
+            title="Redistribute overdue tasks to future study days"
             className="flex items-center gap-1.5 px-3 py-2 text-sm bg-amber-50 text-amber-700 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors disabled:opacity-50 font-medium"
           >
             <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
@@ -759,7 +765,7 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
           <button
             onClick={() => handleRegenerate(true)}
             disabled={regenerating}
-            title="Full AI regeneration"
+            title="Full AI regeneration from scratch"
             className="flex items-center gap-1.5 px-3 py-2 text-sm bg-red-50 text-red-700 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50 font-medium"
           >
             <RotateCcw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
@@ -767,35 +773,6 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
           </button>
         </div>
       </div>
-
-      {/* Excluded Topics Alert (if any were skipped due to time constraints) */}
-      {plan.excluded_topics && plan.excluded_topics.length > 0 && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl shadow-xs">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold text-amber-900">
-                {plan.excluded_topics.length} lower-priority topic(s) were excluded from this schedule
-              </h4>
-              <p className="text-xs text-amber-800 mt-0.5">
-                Due to limited time budget before your exam date, the highest-weightage topics were prioritized.
-              </p>
-              <details className="mt-2 text-xs">
-                <summary className="cursor-pointer text-amber-900 font-semibold hover:underline">
-                  View excluded topics ({plan.excluded_topics.length})
-                </summary>
-                <div className="mt-2 space-y-1 max-h-36 overflow-y-auto pr-1">
-                  {plan.excluded_topics.map((t, idx) => (
-                    <div key={idx} className="flex items-center px-2.5 py-1 bg-amber-100/60 rounded text-amber-900">
-                      <span className="font-medium text-xs">{t.subject}: {formatTopicTitle(t.topic)}</span>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Overall progress bar */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow p-4">
@@ -810,6 +787,47 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
           />
         </div>
       </div>
+
+      {/* Topics Not Included in Plan (Scrollable Box between Overall Progress and Tabs) */}
+      {(!plan.excluded_topics || plan.excluded_topics.length === 0) ? (
+        <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-sm font-medium shadow-xs">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          <span>All remaining topics are included in the plan.</span>
+        </div>
+      ) : (
+        <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl shadow-xs space-y-2.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div>
+                <h4 className="text-sm font-bold text-amber-900">
+                  Topics Not Included in Plan ({plan.excluded_topics.length})
+                </h4>
+                <p className="text-xs text-amber-800">
+                  These topics were not scheduled due to insufficient study time before the exam and lower priority/weightage.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+            {plan.excluded_topics.map((t, idx) => (
+              <div key={idx} className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-amber-100 text-xs shadow-2xs">
+                <div className="flex items-center gap-2 min-w-0 pr-2">
+                  <span className={`font-semibold px-2 py-0.5 rounded-md border text-[11px] shrink-0 ${getSubjectColor(t.subject)}`}>
+                    {t.subject}
+                  </span>
+                  <span className="font-medium text-gray-800 truncate" title={t.topic}>
+                    {formatTopicTitle(t.topic)}
+                  </span>
+                </div>
+                <span className="text-[11px] text-amber-700 bg-amber-100/60 px-2 py-0.5 rounded shrink-0 font-medium">
+                  Lower Priority
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (
@@ -835,8 +853,8 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
             {tab === 'progress' && <span className="flex items-center gap-1.5"><Target className="w-4 h-4" />Progress</span>}
             {tab === 'leftout' && (
               <span className="flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
-                Left-out Topics ({plan.excluded_topics?.length || 0})
+                <AlertTriangle className={`w-4 h-4 ${missedTasks.length > 0 ? 'text-amber-500' : 'text-gray-400'}`} />
+                Left-out Topics ({missedTasks.length})
               </span>
             )}
           </button>
@@ -950,7 +968,15 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
                 </span>
               </h3>
               {selectedTasks.length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">No tasks on this day.</p>
+                selectedDate === plan.target_exam_date ? (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-center text-red-800 text-sm font-semibold">
+                    🎯 Exam Day — Best of luck! No regular study tasks scheduled.
+                  </div>
+                ) : (
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-center text-gray-600 text-sm">
+                    🌿 Rest Day — No tasks scheduled. Use this time to relax and recharge!
+                  </div>
+                )
               ) : (
                 selectedTasks.map(task => (
                   <TaskCard
@@ -1018,35 +1044,49 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
         </div>
       )}
 
-      {/* LEFT-OUT TOPICS TAB */}
+      {/* LEFT-OUT TOPICS TAB (Only scheduled topics that were missed/pending) */}
       {activeTab === 'leftout' && (
         <div className="space-y-4">
-          <div className="bg-amber-50/70 border border-amber-200 p-4 rounded-2xl">
-            <h3 className="font-bold text-amber-900 text-base flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
-              Left-Out Topics ({plan.excluded_topics?.length || 0})
-            </h3>
-            <p className="text-xs text-amber-800 mt-1">
-              These topics could not fit in your schedule before target exam date ({plan.target_exam_date}). Higher-weightage topics were prioritized first within your time budget.
-            </p>
+          <div className="bg-amber-50/70 border border-amber-200 p-4 rounded-2xl flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h3 className="font-bold text-amber-900 text-base flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                Left-Out / Missed Scheduled Topics ({missedTasks.length})
+              </h3>
+              <p className="text-xs text-amber-800 mt-1">
+                These topics were scheduled on past days in your plan but were not completed. You can mark them as done or rebalance them into future study days.
+              </p>
+            </div>
+            {missedTasks.length > 0 && (
+              <button
+                onClick={() => handleRegenerate(false)}
+                disabled={regenerating}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors shadow-xs disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? 'animate-spin' : ''}`} />
+                Rebalance Missed Tasks
+              </button>
+            )}
           </div>
 
-          {!plan.excluded_topics || plan.excluded_topics.length === 0 ? (
+          {missedTasks.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-xs text-gray-400">
               <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-500" />
-              <p className="font-semibold text-gray-700">All Syllabus Topics Are Covered!</p>
-              <p className="text-sm mt-1">Your study plan includes every single topic from your syllabus without exclusions.</p>
+              <p className="font-semibold text-gray-700">No Missed Topics!</p>
+              <p className="text-sm mt-1">You are completely up to date with all scheduled study tasks.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {plan.excluded_topics.map((t, idx) => (
-                <div key={idx} className="bg-white rounded-xl border border-gray-200 p-3.5 shadow-xs flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-gray-800">
-                    {formatTopicTitle(t.topic)}
-                  </p>
-                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 border ${getSubjectColor(t.subject)}`}>
-                    {t.subject}
-                  </span>
+            <div className="space-y-2">
+              {missedTasks.map(task => (
+                <div key={task.id} className="space-y-1">
+                  <div className="text-[11px] font-semibold text-amber-700 px-1 flex items-center gap-1">
+                    <span>Missed from: {isoToDisplay(task.date)}</span>
+                  </div>
+                  <TaskCard
+                    task={task}
+                    onStatusChange={handleTaskStatus}
+                    updating={updatingTaskId === task.id}
+                  />
                 </div>
               ))}
             </div>

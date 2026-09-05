@@ -27,6 +27,7 @@ export interface StudyPlan {
   exam_name: string;
   target_exam_date: string;
   daily_available_hours: number;
+  days_per_week?: number;
   status: PlanStatus;
   tasks: DailyTask[];
   excluded_topics?: ExcludedTopic[];
@@ -56,4 +57,6 @@ export interface SubjectProgress {
 
 export interface RegeneratePlanRequest {
   force_full: boolean;
+  days_per_week_available?: number;
 }
+
