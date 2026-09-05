@@ -48,6 +48,28 @@ from services.studyPlanner.StudyPlanGenerator import (
 # Initialize Database
 Base.metadata.create_all(bind=engine)
 
+def _auto_migrate_db():
+    """Automatically ensures new columns exist on SQLite and PostgreSQL."""
+    try:
+        with engine.connect() as conn:
+            is_sqlite = engine.dialect.name == "sqlite"
+            if is_sqlite:
+                result = conn.execute(text("PRAGMA table_info(study_plans);")).fetchall()
+                cols = [row[1] for row in result]
+                if cols:
+                    if "days_per_week" not in cols:
+                        conn.execute(text("ALTER TABLE study_plans ADD COLUMN days_per_week INTEGER DEFAULT 7;"))
+                    if "excluded_topics" not in cols:
+                        conn.execute(text("ALTER TABLE study_plans ADD COLUMN excluded_topics TEXT DEFAULT '[]';"))
+            else:
+                conn.execute(text("ALTER TABLE study_plans ADD COLUMN IF NOT EXISTS days_per_week INTEGER DEFAULT 7;"))
+                conn.execute(text("ALTER TABLE study_plans ADD COLUMN IF NOT EXISTS excluded_topics JSON DEFAULT '[]';"))
+            conn.commit()
+    except Exception as e:
+        print(f"[INFO] Auto-migration check: {e}")
+
+_auto_migrate_db()
+
 app = FastAPI(title="AceTrack API", version="1.0.0")
 
 # --- Pydantic Models for Mock Test Generator ---
