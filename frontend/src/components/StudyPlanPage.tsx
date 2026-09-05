@@ -669,28 +669,6 @@ const StudyPlanPage: React.FC<StudyPlanPageProps> = ({
     return plan.tasks.filter(t => t.status === 'done');
   }, [plan]);
 
-  // Dynamically compute subject progress from plan.tasks so it reflects ticks/unticks instantly
-  const displayProgress: SubjectProgress[] = useMemo(() => {
-    if (!plan || !plan.tasks.length) return progress;
-    const bySubj: Record<string, { total: number; done: number }> = {};
-    for (const t of plan.tasks) {
-      const s = t.subject || 'General';
-      if (!bySubj[s]) bySubj[s] = { total: 0, done: 0 };
-      bySubj[s].total += 1;
-      if (t.status === 'done') bySubj[s].done += 1;
-    }
-    return Object.entries(bySubj).map(([subject, counts]) => {
-      const ratio = counts.total > 0 ? counts.done / counts.total : 0;
-      const mastery_level: MasteryLevel = ratio >= 0.7 ? 'strong' : ratio >= 0.3 ? 'moderate' : 'weak';
-      return {
-        subject,
-        weightage_score: Math.round(ratio * 100),
-        mastery_level,
-        tasks_completed: counts.done,
-        tasks_total: counts.total,
-      };
-    }).sort((a, b) => a.subject.localeCompare(b.subject));
-  }, [plan, progress]);
 
   const calDays = (() => {
     const year = viewMonth.getFullYear();
