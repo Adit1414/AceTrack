@@ -121,6 +121,7 @@ class StudyPlanOut(BaseModel):
     exam_name: str
     target_exam_date: date
     daily_available_hours: float
+    days_per_week: Optional[int] = 7
     status: str
     tasks: List[DailyTaskOut] = []
     excluded_topics: Optional[List[ExcludedTopicOut]] = []
@@ -133,6 +134,7 @@ class TaskUpdateRequest(BaseModel):
 
 class RegeneratePlanRequest(BaseModel):
     force_full: bool = False
+    days_per_week_available: Optional[int] = None
 
 class SubjectProgressOut(BaseModel):
     subject: str

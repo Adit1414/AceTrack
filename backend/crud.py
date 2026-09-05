@@ -160,6 +160,7 @@ def create_study_plan(
     exam_name: str,
     target_exam_date: date,
     daily_available_hours: float,
+    days_per_week: int = 7,
     excluded_topics: Optional[List[dict]] = None,
 ) -> StudyPlan:
     """Creates a new active study plan for a user."""
@@ -168,6 +169,7 @@ def create_study_plan(
         exam_name=exam_name,
         target_exam_date=target_exam_date,
         daily_available_hours=daily_available_hours,
+        days_per_week=days_per_week,
         status="active",
         excluded_topics=excluded_topics or [],
     )

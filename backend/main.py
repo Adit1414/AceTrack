@@ -490,6 +490,7 @@ def _plan_to_out(plan, excluded_topics=None) -> StudyPlanOut:
         exam_name=plan.exam_name,
         target_exam_date=plan.target_exam_date,
         daily_available_hours=plan.daily_available_hours,
+        days_per_week=getattr(plan, 'days_per_week', 7) or 7,
         status=plan.status,
         excluded_topics=final_excluded,
         tasks=[
@@ -503,7 +504,7 @@ def _plan_to_out(plan, excluded_topics=None) -> StudyPlanOut:
                 status=t.status,
                 completed_at=t.completed_at,
             )
-            for t in sorted(plan.tasks, key=lambda x: x.date)
+            for t in sorted(plan.tasks, key=lambda x: (x.date, -x.priority))
         ]
     )
 
@@ -557,36 +558,46 @@ def generate_study_plan(
     if not topic_list:
         raise HTTPException(status_code=422, detail="No syllabus topics available for planning. Please upload a syllabus.")
 
-    # Compute hour budget & feasibility check
+    days_per_week = request.days_per_week_available or 7
+
+    # Compute hour budget, calendar & feasibility check
     try:
         budget_result = compute_hour_budget(
             syllabus_topics=topic_list,
             topics_already_done=request.topics_already_done or [],
             weak_subjects=request.weak_subjects or [],
             daily_hours=request.daily_available_hours,
-            days_remaining=days_remaining,
-            days_per_week=request.days_per_week_available or 7
+            start_date=today,
+            exam_date=request.exam_date,
+            days_per_week=days_per_week
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
     hour_budget = budget_result["budget"]
     excluded_topics = budget_result.get("excluded_topics", [])
+    revision_tasks = budget_result.get("revision_tasks", [])
+    calendar_info = budget_result.get("calendar", {})
+    regular_study_dates = calendar_info.get("regular_study_dates", [])
+    revision_dates = calendar_info.get("revision_dates", [])
+    allowed_study_dates = regular_study_dates + revision_dates
 
-    # Call LLM for sequencing
+    # Call LLM or Algorithmic sequencing
     try:
         raw_days = _generate_schedule_from_llm(
             hour_budget=hour_budget,
+            revision_tasks=revision_tasks,
+            regular_study_dates=regular_study_dates,
+            revision_dates=revision_dates,
             start_date=today,
             target_exam_date=request.exam_date,
-            days_remaining=days_remaining,
             daily_available_hours=request.daily_available_hours,
         )
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    # Validate & cap daily hours
-    validated_days = _validate_and_cap_daily_hours(raw_days, request.daily_available_hours)
+    # Validate & cap daily hours strictly on allowed study dates
+    validated_days = _validate_and_cap_daily_hours(raw_days, request.daily_available_hours, allowed_dates=allowed_study_dates)
 
     # Persist study plan
     plan = create_study_plan(
@@ -595,12 +606,12 @@ def generate_study_plan(
         exam_name=request.exam_name or "JEE",
         target_exam_date=request.exam_date,
         daily_available_hours=request.daily_available_hours,
+        days_per_week=days_per_week,
         excluded_topics=excluded_topics,
     )
 
     # Flatten tasks for bulk insert
     flat_tasks = []
-    subject_set = set()
     for day_entry in validated_days:
         try:
             task_date = date_type.fromisoformat(day_entry["date"])
@@ -612,9 +623,8 @@ def generate_study_plan(
                 "subject": task.get("subject", "General"),
                 "topic": task.get("topic", "Study"),
                 "estimated_hours": float(task.get("hours", 1.0)),
-                "priority": 3,
+                "priority": task.get("priority", 3),
             })
-            subject_set.add(task.get("subject", "General"))
 
     bulk_create_tasks(db, plan.id, flat_tasks)
 
@@ -709,26 +719,29 @@ def regenerate_study_plan(
 ):
     """
     Adaptive regeneration:
-    - force_full=False: rule-based rebalancing of overdue tasks.
-    - force_full=True: archives current plan and generates a fresh LLM plan.
+    - force_full=False: rule-based rebalancing of overdue tasks across future active study days.
+    - force_full=True: archives current plan and generates a fresh plan from scratch.
     """
     user_id = current_user["user_id"]
     plan = get_active_plan(db, user_id)
     if not plan:
         raise HTTPException(status_code=404, detail="No active study plan to regenerate.")
 
+    from datetime import date as today_type
+    today = today_type.today()
+    from services.studyPlanner.StudyPlanGenerator import get_study_calendar
+
     if body.force_full:
         archive_active_plan(db, user_id)
-        # Delegate to generate endpoint logic by raising to re-call
-        # (We reuse generate logic inline to avoid HTTP redirect)
-        from datetime import date as today_type
-        today = today_type.today()
-        onboarding = get_onboarding_data_by_user_id(db, user_id)
-        if not onboarding:
-            raise HTTPException(status_code=422, detail="Onboarding data missing.")
-        days_remaining = (onboarding.exam_date - today).days
+        days_remaining = (plan.target_exam_date - today).days
         if days_remaining <= 0:
-            raise HTTPException(status_code=422, detail="Exam date has already passed.")
+            raise HTTPException(status_code=422, detail="Target exam date has already passed.")
+
+        onboarding = get_onboarding_data_by_user_id(db, user_id)
+        topics_covered = onboarding.topics_covered if onboarding else []
+        weak_subjects = onboarding.weak_subjects if onboarding else []
+        days_per_week = body.days_per_week_available or getattr(plan, 'days_per_week', 7) or 7
+
         topic_list = []
         syllabuses = get_syllabuses_by_user_id(db, user_id)
         if syllabuses:
@@ -747,29 +760,55 @@ def regenerate_study_plan(
                         subject = parts[0].strip() if len(parts) == 2 else syl.name
                         topic = parts[1].strip() if len(parts) == 2 else topic_str.strip()
                         topic_list.append({"subject": subject, "topic": topic, "weightage": 1.0})
+
+        if not topic_list:
+            raise HTTPException(status_code=422, detail="No syllabus topics available for planning.")
+
         try:
             budget_result = compute_hour_budget(
                 syllabus_topics=topic_list,
-                topics_already_done=onboarding.topics_covered or [],
-                weak_subjects=onboarding.weak_subjects or [],
+                topics_already_done=topics_covered or [],
+                weak_subjects=weak_subjects or [],
                 daily_hours=plan.daily_available_hours,
-                days_remaining=days_remaining,
-                days_per_week=7
+                start_date=today,
+                exam_date=plan.target_exam_date,
+                days_per_week=days_per_week
             )
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
+
+        hour_budget = budget_result["budget"]
+        excluded_topics = budget_result.get("excluded_topics", [])
+        revision_tasks = budget_result.get("revision_tasks", [])
+        calendar_info = budget_result.get("calendar", {})
+        regular_study_dates = calendar_info.get("regular_study_dates", [])
+        revision_dates = calendar_info.get("revision_dates", [])
+        allowed_study_dates = regular_study_dates + revision_dates
+
         try:
             raw_days = _generate_schedule_from_llm(
-                hour_budget=budget_result["budget"],
+                hour_budget=hour_budget,
+                revision_tasks=revision_tasks,
+                regular_study_dates=regular_study_dates,
+                revision_dates=revision_dates,
                 start_date=today,
-                target_exam_date=onboarding.exam_date,
-                days_remaining=days_remaining,
+                target_exam_date=plan.target_exam_date,
                 daily_available_hours=plan.daily_available_hours,
             )
         except RuntimeError as e:
             raise HTTPException(status_code=500, detail=str(e))
-        validated_days = _validate_and_cap_daily_hours(raw_days, plan.daily_available_hours)
-        new_plan = create_study_plan(db, user_id, onboarding.exam_name, onboarding.exam_date, plan.daily_available_hours)
+
+        validated_days = _validate_and_cap_daily_hours(raw_days, plan.daily_available_hours, allowed_dates=allowed_study_dates)
+        new_plan = create_study_plan(
+            db=db,
+            user_id=user_id,
+            exam_name=plan.exam_name,
+            target_exam_date=plan.target_exam_date,
+            daily_available_hours=plan.daily_available_hours,
+            days_per_week=days_per_week,
+            excluded_topics=excluded_topics
+        )
+
         flat_tasks = []
         for day_entry in validated_days:
             try:
@@ -778,17 +817,18 @@ def regenerate_study_plan(
                 continue
             for task in day_entry.get("tasks", []):
                 flat_tasks.append({
-                    "date": task_date, "subject": task.get("subject", "General"),
+                    "date": task_date,
+                    "subject": task.get("subject", "General"),
                     "topic": task.get("topic", "Study"),
-                    "estimated_hours": float(task.get("hours", 1.0)), "priority": 3,
+                    "estimated_hours": float(task.get("hours", 1.0)),
+                    "priority": task.get("priority", 3),
                 })
+
         bulk_create_tasks(db, new_plan.id, flat_tasks)
         new_plan = get_plan_by_id(db, new_plan.id, user_id)
-        return _plan_to_out(new_plan)
+        return _plan_to_out(new_plan, excluded_topics=excluded_topics)
     else:
-        # Rule-based: redistribute overdue tasks across remaining days
-        from datetime import date as today_type
-        today = today_type.today()
+        # Rule-based rebalancing: redistribute overdue tasks across future study dates
         from models import DailyTask as DT
         overdue = (
             db.query(DT)
@@ -798,25 +838,28 @@ def regenerate_study_plan(
         if not overdue:
             return _plan_to_out(plan)
 
-        # Get remaining days in plan
-        onboarding = get_onboarding_data_by_user_id(db, user_id)
-        if not onboarding:
-            return _plan_to_out(plan)
-        remaining_days = [
-            today + __import__('datetime').timedelta(days=i)
-            for i in range((onboarding.exam_date - today).days)
-        ]
-        if not remaining_days:
+        days_per_week = getattr(plan, 'days_per_week', 7) or 7
+        try:
+            cal = get_study_calendar(today, plan.target_exam_date, days_per_week)
+            future_study_dates = cal["active_study_dates"]
+        except ValueError:
+            future_study_dates = []
+
+        if not future_study_dates:
             return _plan_to_out(plan)
 
         from models import DailyTask as DT2
-        existing_loads = {}
+        existing_loads = {d.isoformat(): 0.0 for d in future_study_dates}
         for t in db.query(DT2).filter(DT2.plan_id == plan.id, DT2.date >= today).all():
             ds = t.date.isoformat()
-            existing_loads[ds] = existing_loads.get(ds, 0.0) + t.estimated_hours
+            if ds in existing_loads:
+                existing_loads[ds] = existing_loads[ds] + t.estimated_hours
 
-        overdue_dicts = [{"estimated_hours": t.estimated_hours, "subject": t.subject, "topic": t.topic} for t in overdue]
-        additions = redistribute_overdue_tasks(overdue_dicts, remaining_days, plan.daily_available_hours, existing_loads)
+        overdue_dicts = [
+            {"estimated_hours": t.estimated_hours, "subject": t.subject, "topic": t.topic, "priority": t.priority}
+            for t in overdue
+        ]
+        additions = redistribute_overdue_tasks(overdue_dicts, future_study_dates, plan.daily_available_hours, existing_loads)
 
         # Delete old overdue tasks
         for t in overdue:
@@ -832,7 +875,7 @@ def regenerate_study_plan(
                     "subject": task["subject"],
                     "topic": task["topic"],
                     "estimated_hours": task["estimated_hours"],
-                    "priority": 3,
+                    "priority": task.get("priority", 3),
                 })
         if new_tasks:
             bulk_create_tasks(db, plan.id, new_tasks)
