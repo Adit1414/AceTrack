@@ -9,6 +9,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, F
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from database import SessionLocal, engine, Base
 from models import User
 from schemas import (
@@ -50,23 +51,32 @@ Base.metadata.create_all(bind=engine)
 
 def _auto_migrate_db():
     """Automatically ensures new columns exist on SQLite and PostgreSQL."""
+    print("[MIGRATE] Running auto-migration check...")
     try:
         with engine.connect() as conn:
             is_sqlite = engine.dialect.name == "sqlite"
             if is_sqlite:
                 result = conn.execute(text("PRAGMA table_info(study_plans);")).fetchall()
                 cols = [row[1] for row in result]
-                if cols:
-                    if "days_per_week" not in cols:
-                        conn.execute(text("ALTER TABLE study_plans ADD COLUMN days_per_week INTEGER DEFAULT 7;"))
-                    if "excluded_topics" not in cols:
-                        conn.execute(text("ALTER TABLE study_plans ADD COLUMN excluded_topics TEXT DEFAULT '[]';"))
+                print(f"[MIGRATE] SQLite columns found: {cols}")
+                if "days_per_week" not in cols:
+                    conn.execute(text("ALTER TABLE study_plans ADD COLUMN days_per_week INTEGER DEFAULT 7;"))
+                    print("[MIGRATE] Added days_per_week column (SQLite)")
+                if "excluded_topics" not in cols:
+                    conn.execute(text("ALTER TABLE study_plans ADD COLUMN excluded_topics TEXT DEFAULT '[]';"))
+                    print("[MIGRATE] Added excluded_topics column (SQLite)")
             else:
+                # PostgreSQL - use IF NOT EXISTS
                 conn.execute(text("ALTER TABLE study_plans ADD COLUMN IF NOT EXISTS days_per_week INTEGER DEFAULT 7;"))
-                conn.execute(text("ALTER TABLE study_plans ADD COLUMN IF NOT EXISTS excluded_topics JSON DEFAULT '[]';"))
+                print("[MIGRATE] Ensured days_per_week column (PostgreSQL)")
+                conn.execute(text("ALTER TABLE study_plans ADD COLUMN IF NOT EXISTS excluded_topics TEXT DEFAULT '[]';"))
+                print("[MIGRATE] Ensured excluded_topics column (PostgreSQL)")
             conn.commit()
+            print("[MIGRATE] Auto-migration complete.")
     except Exception as e:
-        print(f"[INFO] Auto-migration check: {e}")
+        print(f"[MIGRATE] Error during auto-migration: {e}")
+        import traceback
+        traceback.print_exc()
 
 _auto_migrate_db()
 
